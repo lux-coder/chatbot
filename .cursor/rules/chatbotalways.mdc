@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+General Development Rules
+    Write clean, short, and meaningful code – every class, method, and function must have a minimal and clear responsibility.
+    Follow SOLID principles (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion).
+    Write code for humans, not for the machine – use explicit and descriptive names (e.g., get_user_payment_status() instead of getStatus()).
+    Never duplicate code – prefer refactoring into shared functions, services, or modules.
+    Always create a Plan in /plans before starting new features; execute step-by-step with validation.
+
+Backend Development Rules
+    Programming language: Python 3.12+​
+    Primary backend framework: FastAPI (async-first, strongly typed)​
+    ORM: Tortoise ORM for PostgreSQL​
+
+API Design:
+    Use strict RESTful standards.
+    Version APIs via the URL path (e.g., /api/v1/...)​
+    All endpoints must be automatically documented using FastAPI (OpenAPI schemas).
+
+Architecture:
+    Microservices, each with clearly defined domain boundaries​
+    Each microservice owns its own database (schema_per_tenant pattern)​
+
+Security:
+    Authentication and authorization via Keycloak 
+    Encrypt all data at rest and in transit (TLS/mTLS)​
+
+AI Calls:
+    If a call is external (e.g., OpenAI), mandatory pseudonymization of PII is required​
+    Prefer local inference whenever possible; fallback to external services when needed​
+
+Coding Standards
+    All functions must use Python type hints.
+    All methods that access external resources must be async and use await.
+    Always use Dependency Injection where applicable (e.g., in FastAPI routers and services).
+    Use small, clean services – 1 service = 1 domain or tightly coupled operation group.
+    Each service must document the exceptions it can raise.
+    Never use magic numbers or strings – define them as constants.
+    If an entity has business logic, apply "domain services" or "value objects" using DDD principles​
+    Use Pydantic models for all data validation, request parsing, and response schemas whenever possible.
+
+Testing Rules
+    Unit tests are mandatory for all functions and services containing business logic.
+    Minimum 80% code coverage must be achieved​
+    Use pytest for backend tests​
+    Each test must have clear setup and teardown logic if using external resources.
+    End-to-End (E2E) tests (Postman collections, Cypress) must cover key user flows​
+​
+Versioning and Deployment Rules
+    Every code change must follow the commit message standard (feat/fix/refactor/test/docs).
+    Each Pull Request must pass at least one unit test and a successful /healthz endpoint check​
+    Deployment: Docker container-based, orchestrated through Kubernetes, resource limits defined via Helm charts​
+
+Maintenance and Scalability Rules
+    Every microservice must expose a /healthz endpoint.
+    Prometheus must collect metrics from all services.
+    All logs must be centralized (ELK or Loki stacks).
+    Unprocessable errors must be redirected to Dead Letter Queues (DLQ) for later inspection​
