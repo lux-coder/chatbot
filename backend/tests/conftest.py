@@ -154,4 +154,31 @@ async def test_user(test_user_data):
         user = await User.create(**user_data)
         return user
     finally:
-        tenant_context.reset(token) 
+        tenant_context.reset(token)
+
+@pytest_asyncio.fixture
+async def tenant_context_manager(test_tenant_id):
+    """Create a tenant context manager for tests."""
+    from app.core.tenancy import tenant_context
+
+    class TenantContextManager:
+        async def __aenter__(self):
+            self.token = tenant_context.set(test_tenant_id)
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            tenant_context.reset(self.token)
+
+    return TenantContextManager()
+
+@pytest_asyncio.fixture
+async def conversation_repository():
+    """Create a conversation repository instance."""
+    from app.repositories.chat import ConversationRepository
+    return ConversationRepository()
+
+@pytest_asyncio.fixture
+async def message_repository():
+    """Create a message repository instance."""
+    from app.repositories.chat import MessageRepository
+    return MessageRepository() 

@@ -72,18 +72,15 @@ class TenantRepository(BaseRepository[ModelType]):
         self,
         offset: int = 0,
         limit: int = 100,
-        filters: Optional[Q] = None,
         **kwargs
     ) -> List[ModelType]:
         """List records within tenant context."""
         tenant_id = get_current_tenant()
-        base_query = Q(tenant_id=tenant_id, is_active=True)
-        
-        if filters:
-            base_query &= filters
-            
-        query = self.model.filter(base_query, **kwargs)
-        return await query.offset(offset).limit(limit)
+        return await self.model.filter(
+            tenant_id=tenant_id,
+            is_active=True,
+            **kwargs
+        ).offset(offset).limit(limit)
 
     async def count(self, **filters) -> int:
         """Count records within tenant context."""

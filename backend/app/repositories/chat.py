@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from app.models.chat import Conversation, Message
 from app.repositories.base import TenantRepository
+from app.core.tenancy import get_current_tenant
 
 
 class ConversationRepository(TenantRepository[Conversation]):
@@ -105,11 +106,11 @@ class MessageRepository(TenantRepository[Message]):
         conversation_id: UUID
     ) -> Optional[Message]:
         """Get the latest message from a conversation."""
-        messages = await self.list(
+        messages = await self.model.filter(
             conversation_id=conversation_id,
-            limit=1,
-            ordering="-timestamp"
-        )
+            tenant_id=get_current_tenant(),
+            is_active=True
+        ).order_by("-timestamp").limit(1)
         return messages[0] if messages else None
 
     async def count_messages(

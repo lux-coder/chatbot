@@ -3,6 +3,7 @@ from uuid import UUID
 from app.models.user import User
 from app.repositories.base import TenantRepository
 from tortoise.expressions import Q
+from app.core.tenancy import get_current_tenant
 
 
 class UserRepository(TenantRepository[User]):
@@ -50,16 +51,14 @@ class UserRepository(TenantRepository[User]):
     async def search_users(
         self,
         search_term: str,
-        offset: int = 0,
-        limit: int = 50
+        limit: int = 10
     ) -> List[User]:
         """Search users by username or email."""
-        query = Q(username__icontains=search_term) | Q(email__icontains=search_term)
-        return await self.list(
-            offset=offset,
-            limit=limit,
-            filters=query
-        )
+        return await self.model.filter(
+            Q(username__icontains=search_term) | Q(email__icontains=search_term),
+            tenant_id=get_current_tenant(),
+            is_active=True
+        ).limit(limit)
 
     async def update_user_profile(
         self,

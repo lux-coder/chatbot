@@ -51,7 +51,11 @@ class TestSettings(BaseModel):
             },
             "apps": {
                 "models": {
-                    "models": ["app.models.user", "app.models.base"],
+                    "models": [
+                        "app.models.user",
+                        "app.models.base",
+                        "app.models.chat"
+                    ],
                     "default_connection": "default",
                 }
             },
