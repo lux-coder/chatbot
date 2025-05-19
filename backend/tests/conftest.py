@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from tortoise import Tortoise
 from app.core.config.test_settings import get_test_settings
 from app.core.tenancy import tenant_context
-from app.core.database_test import init_test_db, close_test_db, cleanup_test_db
+from .database_test import init_test_db, close_test_db, cleanup_test_db
 
 # Event Loop Fixture
 @pytest.fixture(scope="session")
