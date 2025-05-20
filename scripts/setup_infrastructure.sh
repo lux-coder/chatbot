@@ -96,7 +96,7 @@ fi
 
 # Start monitoring services
 echo -e "\n${YELLOW}Starting monitoring services...${NC}"
-docker compose up -d redis_exporter prometheus grafana loki promtail
+docker compose up -d redis_exporter postgres_exporter nginx_exporter prometheus grafana loki promtail
 
 # Wait for monitoring services to be healthy
 echo -e "\n${YELLOW}Waiting for monitoring services to be healthy...${NC}"
@@ -108,6 +108,24 @@ if curl -s -f http://localhost:9121/metrics > /dev/null; then
 else
     echo -e "${RED}Redis Exporter health check failed${NC}"
     docker compose logs redis_exporter
+fi
+
+# Postgres Exporter check
+echo -e "\n${YELLOW}Testing Postgres Exporter...${NC}"
+if curl -s -f http://localhost:9187/metrics > /dev/null; then
+    echo -e "${GREEN}Postgres Exporter is responding correctly${NC}"
+else
+    echo -e "${RED}Postgres Exporter health check failed${NC}"
+    docker compose logs postgres_exporter
+fi
+
+# Nginx Exporter check
+echo -e "\n${YELLOW}Testing Nginx Exporter...${NC}"
+if curl -s -f http://localhost:9113/metrics > /dev/null; then
+    echo -e "${GREEN}Nginx Exporter is responding correctly${NC}"
+else
+    echo -e "${RED}Nginx Exporter health check failed${NC}"
+    docker compose logs nginx_exporter
 fi
 
 # Prometheus check
@@ -140,10 +158,12 @@ fi
 echo -e "\n${GREEN}Infrastructure setup completed successfully!${NC}"
 echo -e "\n${YELLOW}All services are running:${NC}"
 echo -e "- Core services (PostgreSQL, Redis, Keycloak)"
-echo -e "- Monitoring (Redis Exporter, Prometheus, Grafana, Loki, Promtail)"
+echo -e "- Monitoring (Redis Exporter, Postgres Exporter, Nginx Exporter, Prometheus, Grafana, Loki, Promtail)"
 echo -e "\n${YELLOW}You can access:${NC}"
 echo -e "- Grafana at http://localhost:3001 (default credentials: admin/admin)"
 echo -e "- Prometheus at http://localhost:9090"
 echo -e "- Redis Exporter metrics at http://localhost:9121/metrics"
+echo -e "- Postgres Exporter metrics at http://localhost:9187/metrics"
+echo -e "- Nginx Exporter metrics at http://localhost:9113/metrics"
 echo -e "- Loki at http://localhost:3100"
 echo -e "\n${YELLOW}You can now proceed with the testing steps from the infrastructure_testing.md guide.${NC}" 

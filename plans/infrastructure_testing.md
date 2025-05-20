@@ -180,11 +180,14 @@ docker compose logs -f
 redis-cli -a "$REDIS_PASSWORD" info stats
 redis-cli -a "$REDIS_PASSWORD" info memory
 
+# Postgres metrics
+curl http://localhost:9187/metrics
+
+# Nginx metrics
+curl http://localhost:9113/metrics
+
 # Keycloak metrics
 curl http://localhost:8080/metrics
-
-# Nginx metrics (if configured)
-curl http://localhost/nginx_status
 ```
 
 ## 6. Cleanup
