@@ -17,12 +17,12 @@ docker compose down -v
 echo -e "\n${YELLOW}Creating directories...${NC}"
 mkdir -p secrets
 mkdir -p nginx/certs
-mkdir -p redis/data
-mkdir -p postgres/data
+# Ensure the init directory for PostgreSQL exists if needed by compose volume mount
+mkdir -p docker/services/postgres/init 
 
-# Remove old data
-rm -rf redis/data/*
-rm -rf postgres/data/*
+# Remove old data from potential previous local bind mounts (optional, as named volumes are used)
+# rm -rf docker/services/redis/data/* # Redis uses named volume 'redis_data'
+# rm -rf docker/services/postgres/data/* # Postgres uses named volume 'postgres_data'
 
 # Generate secrets
 echo -e "\n${YELLOW}Generating secrets...${NC}"
@@ -32,8 +32,9 @@ openssl rand -base64 32 > secrets/postgres_password.txt
 echo -e "${GREEN}Generating Redis password...${NC}"
 openssl rand -base64 32 > secrets/redis_password.txt
 
-echo -e "${GREEN}Generating Keycloak admin password...${NC}"
-openssl rand -base64 32 > secrets/keycloak_admin_password.txt
+# Ensure admin password is not base64 for Keycloak direct use
+echo -e "${GREEN}Generating Keycloak admin password (plain text)...${NC}"
+openssl rand -hex 16 > secrets/keycloak_admin_password.txt # Generate a hex string for easier use
 
 echo -e "${GREEN}Generating Keycloak client secret...${NC}"
 openssl rand -base64 32 > secrets/keycloak_secret.txt
@@ -44,7 +45,7 @@ chmod 600 secrets/*
 
 # Generate SSL certificates
 echo -e "\n${YELLOW}Generating SSL certificates...${NC}"
-./scripts/generate_ssl_certs.sh
+./generate_ssl_certs.sh # Assuming this script is in the same directory (scripts/)
 
 # Export passwords for docker-compose
 export REDIS_PASSWORD=$(cat secrets/redis_password.txt)
@@ -57,8 +58,6 @@ docker compose up -d postgres redis keycloak
 
 # Wait for services to be healthy
 echo -e "\n${YELLOW}Waiting for services to be healthy...${NC}"
-timeout 300 bash -c 'until docker compose ps postgres redis keycloak | grep -q "healthy"; do echo "Waiting for services to be healthy..."; sleep 5; done'
-
 # Basic health checks
 echo -e "\n${YELLOW}Performing basic health checks...${NC}"
 
@@ -73,7 +72,7 @@ fi
 
 # Postgres check
 echo -e "\n${YELLOW}Testing PostgreSQL connection...${NC}"
-if docker compose exec postgres pg_isready | grep -q "accepting connections"; then
+if docker compose exec postgres pg_isready -U postgres -d chatbot | grep -q "accepting connections"; then
     echo -e "${GREEN}PostgreSQL is responding correctly${NC}"
 else
     echo -e "${RED}PostgreSQL health check failed${NC}"
@@ -81,11 +80,15 @@ else
 fi
 
 # Keycloak check
+echo -e "\n${YELLOW}Waiting additional time for Keycloak to fully initialize...${NC}"
+sleep 60 # Keep this sleep as Keycloak might take longer after healthcheck reports ready
 echo -e "\n${YELLOW}Testing Keycloak health endpoint...${NC}"
-if curl -s -f http://localhost:8080/auth/health/ready > /dev/null; then
+# Corrected Keycloak health check URL
+if curl -s -f http://localhost:8080/health/ready > /dev/null; then
     echo -e "${GREEN}Keycloak is responding correctly${NC}"
 else
     echo -e "${RED}Keycloak health check failed${NC}"
+    docker compose logs keycloak # Output Keycloak logs on failure
     exit 1
 fi
 

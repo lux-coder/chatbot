@@ -23,7 +23,7 @@ COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
 # Install curl for healthcheck
 USER root
-RUN microdnf install -y curl && microdnf clean all
+RUN dnf install -y curl && dnf clean all
 USER 1000
 
 # Expose ports

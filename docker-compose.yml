@@ -184,7 +184,7 @@ services:
       POSTGRES_DB: chatbot
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./docker/services/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -202,7 +202,7 @@ services:
 
   redis:
     build:
-      context: ./redis
+      context: ./docker/services/redis
       dockerfile: Dockerfile
     networks:
       - db_net
@@ -239,7 +239,7 @@ services:
 
   keycloak:
     build:
-      context: ./keycloak
+      context: ./docker/services/keycloak
       dockerfile: Dockerfile
     networks:
       - frontend_net
