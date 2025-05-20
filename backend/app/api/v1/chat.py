@@ -8,26 +8,33 @@ from backend.app.schemas import (
     FeedbackRequest,
     FeedbackResponse,
 )
+from backend.app.services.auth import get_current_user, get_current_user_roles, UserToken
+from backend.app.core.tenancy import require_tenant
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.post("/", response_model=ChatMessageResponse, status_code=status.HTTP_201_CREATED)
 async def send_message(
     request: ChatMessageRequest,
-    # user: User = Depends(get_current_user),
-    # tenant_id: UUID = Depends(get_current_tenant),
+    user: UserToken = Depends(get_current_user),
+    tenant_id: UUID = Depends(require_tenant),
+    roles: List[str] = Depends(get_current_user_roles),
 ):
     """
     Submit a user message and receive an AI response.
     """
     # TODO: Implement chat logic, model selection, DB storage, audit logging
+    # Example RBAC check:
+    # if "user" not in roles:
+    #     raise HTTPException(status_code=403, detail="Insufficient permissions")
     raise NotImplementedError
 
 @router.get("/history", response_model=ChatHistoryResponse)
 async def get_chat_history(
     conversation_id: UUID,
-    # user: User = Depends(get_current_user),
-    # tenant_id: UUID = Depends(get_current_tenant),
+    user: UserToken = Depends(get_current_user),
+    tenant_id: UUID = Depends(require_tenant),
+    roles: List[str] = Depends(get_current_user_roles),
 ):
     """
     Retrieve chat history for the authenticated user/tenant.
@@ -38,8 +45,9 @@ async def get_chat_history(
 @router.post("/feedback", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
 async def submit_feedback(
     request: FeedbackRequest,
-    # user: User = Depends(get_current_user),
-    # tenant_id: UUID = Depends(get_current_tenant),
+    user: UserToken = Depends(get_current_user),
+    tenant_id: UUID = Depends(require_tenant),
+    roles: List[str] = Depends(get_current_user_roles),
 ):
     """
     Submit feedback on an AI response.

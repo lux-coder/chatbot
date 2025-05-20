@@ -7,11 +7,34 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${YELLOW}Starting infrastructure setup...${NC}"
+# Default: do not remove volumes
+COMPLETE_TEARDOWN=false
 
-# Clean up old containers and volumes
-echo -e "\n${YELLOW}Cleaning up old containers and volumes...${NC}"
-docker compose down -v
+# Parse arguments
+for arg in "$@"; do
+  case $arg in
+    --complete_teardown=true)
+      COMPLETE_TEARDOWN=true
+      ;;
+    --complete_teardown=false)
+      COMPLETE_TEARDOWN=false
+      ;;
+    *)
+      # Unknown option
+      ;;
+  esac
+  shift
+done
+
+if $COMPLETE_TEARDOWN; then
+  echo -e "\n${YELLOW}Cleaning up old containers and volumes (complete teardown)...${NC}"
+  docker compose down -v
+else
+  echo -e "\n${YELLOW}Stopping old containers (preserving volumes and data)...${NC}"
+  docker compose down
+fi
+
+echo -e "${YELLOW}Starting infrastructure setup...${NC}"
 
 # Create necessary directories
 echo -e "\n${YELLOW}Creating directories...${NC}"
@@ -153,6 +176,36 @@ if curl -s -f http://localhost:3100/ready > /dev/null; then
 else
     echo -e "${RED}Loki health check failed${NC}"
     docker compose logs loki
+fi
+
+# Start backend service
+echo -e "\n${YELLOW}Building and starting backend service...${NC}"
+docker compose up -d --build backend
+
+# Optionally start frontend if Dockerfile exists
+if [ -f "frontend/Dockerfile" ]; then
+  echo -e "\n${YELLOW}Building and starting frontend service...${NC}"
+  docker compose up -d --build frontend
+else
+  echo -e "\n${YELLOW}Skipping frontend: frontend/Dockerfile not found. Implement frontend before enabling this service.${NC}"
+fi
+
+# Wait for backend to be healthy
+BACKEND_HEALTHY=0
+for i in {1..10}; do
+    if curl -s -f http://localhost:8000/api/v1/healthz > /dev/null; then
+        BACKEND_HEALTHY=1
+        break
+    fi
+    echo -e "${YELLOW}Waiting for backend to become healthy... (${i}/10)${NC}"
+    sleep 5
+done
+if [ $BACKEND_HEALTHY -eq 1 ]; then
+    echo -e "${GREEN}Backend is responding correctly${NC}"
+else
+    echo -e "${RED}Backend health check failed${NC}"
+    docker compose logs backend
+    exit 1
 fi
 
 echo -e "\n${GREEN}Infrastructure setup completed successfully!${NC}"

@@ -4,10 +4,12 @@ FROM alpine:3.19 as builder
 # Install build dependencies
 RUN apk add --no-cache \
     gcc \
+    g++ \
     libc-dev \
     make \
     openssl-dev \
     pcre-dev \
+    pcre2-dev \
     zlib-dev \
     linux-headers \
     curl \
