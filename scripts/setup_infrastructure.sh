@@ -51,18 +51,35 @@ mkdir -p monitoring/promtail
 
 # Generate secrets
 echo -e "\n${YELLOW}Generating secrets...${NC}"
-echo -e "${GREEN}Generating PostgreSQL password...${NC}"
-openssl rand -base64 32 > secrets/postgres_password.txt
 
-echo -e "${GREEN}Generating Redis password...${NC}"
-openssl rand -base64 32 > secrets/redis_password.txt
+if $COMPLETE_TEARDOWN || [ ! -f secrets/postgres_password.txt ]; then
+  echo -e "${GREEN}Generating PostgreSQL password...${NC}"
+  openssl rand -base64 32 > secrets/postgres_password.txt
+else
+  echo -e "${YELLOW}Using existing PostgreSQL password${NC}"
+fi
+
+if $COMPLETE_TEARDOWN || [ ! -f secrets/redis_password.txt ]; then
+  echo -e "${GREEN}Generating Redis password...${NC}"
+  openssl rand -base64 32 > secrets/redis_password.txt
+else
+  echo -e "${YELLOW}Using existing Redis password${NC}"
+fi
 
 # Ensure admin password is not base64 for Keycloak direct use
-echo -e "${GREEN}Generating Keycloak admin password (plain text)...${NC}"
-openssl rand -hex 16 > secrets/keycloak_admin_password.txt # Generate a hex string for easier use
+if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_admin_password.txt ]; then
+  echo -e "${GREEN}Generating Keycloak admin password (plain text)...${NC}"
+  openssl rand -hex 16 > secrets/keycloak_admin_password.txt
+else
+  echo -e "${YELLOW}Using existing Keycloak admin password${NC}"
+fi
 
-echo -e "${GREEN}Generating Keycloak client secret...${NC}"
-openssl rand -base64 32 > secrets/keycloak_secret.txt
+if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_secret.txt ]; then
+  echo -e "${GREEN}Generating Keycloak client secret...${NC}"
+  openssl rand -base64 32 > secrets/keycloak_secret.txt
+else
+  echo -e "${YELLOW}Using existing Keycloak client secret${NC}"
+fi
 
 # Set proper permissions
 echo -e "\n${YELLOW}Setting file permissions...${NC}"
@@ -76,6 +93,7 @@ echo -e "\n${YELLOW}Generating SSL certificates...${NC}"
 export REDIS_PASSWORD=$(cat secrets/redis_password.txt)
 export POSTGRES_PASSWORD=$(cat secrets/postgres_password.txt)
 export KEYCLOAK_ADMIN_PASSWORD=$(cat secrets/keycloak_admin_password.txt)
+export KEYCLOAK_CLIENT_SECRET=$(cat secrets/keycloak_secret.txt)
 
 # Start core services
 echo -e "\n${YELLOW}Starting core services...${NC}"
@@ -105,16 +123,28 @@ else
 fi
 
 # Keycloak check
-echo -e "\n${YELLOW}Waiting additional time for Keycloak to fully initialize...${NC}"
-sleep 60 # Keep this sleep as Keycloak might take longer after healthcheck reports ready
-echo -e "\n${YELLOW}Testing Keycloak health endpoint...${NC}"
-# Corrected Keycloak health check URL
-if curl -s -f http://localhost:8080/health/ready > /dev/null; then
+echo -e "\n${YELLOW}Waiting for Keycloak to become ready...${NC}"
+KEYCLOAK_READY=0
+for i in {1..24}; do
+    if curl -s -f http://localhost:8080/health/ready > /dev/null; then
+        KEYCLOAK_READY=1
+        break
+    fi
+    echo -e "${YELLOW}Keycloak not ready yet... (${i}/24)${NC}"
+    sleep 5
+done
+if [ $KEYCLOAK_READY -eq 1 ]; then
     echo -e "${GREEN}Keycloak is responding correctly${NC}"
 else
     echo -e "${RED}Keycloak health check failed${NC}"
-    docker compose logs keycloak # Output Keycloak logs on failure
+    docker compose logs keycloak
     exit 1
+fi
+
+# Build Nginx image only if it doesn't exist to save time
+if [ -z "$(docker images -q chatbot-nginx)" ]; then
+    echo -e "\n${YELLOW}Building Nginx image (first run)...${NC}"
+    docker compose build nginx
 fi
 
 # Start monitoring services
