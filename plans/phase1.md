@@ -92,11 +92,14 @@ This document outlines the detailed implementation steps for Phase 1 of the chat
    - Loki (log aggregation): **DONE**.
    - Promtail (log shipping): **DONE**.
    - Redis Exporter (for Redis metrics): **DONE**.
+   - Postgres Exporter (for PostgreSQL metrics): **DONE**.
+   - Nginx Exporter (for Nginx metrics): **DONE**.
 2. Configure Prometheus (`./monitoring/prometheus/prometheus.yml`):
    - Basic Prometheus self-scrape: **DONE**.
    - Scrape configuration for Keycloak: **DONE** (Keycloak exposes `/metrics`).
    - Scrape configuration for Redis (via Redis Exporter): **DONE**.
-   - Scrape configuration for Nginx (requires Nginx `stub_status` or vts exporter - **PENDING NGINX CONFIG**).
+   - Scrape configuration for Postgres (via Postgres Exporter): **DONE**.
+   - Scrape configuration for Nginx (via Nginx Prometheus Exporter): **DONE**.
    - Scrape configuration for application services (Backend, AI Service, Worker - **PENDING APP IMPLEMENTATION of /metrics**).
 3. Configure Loki & Promtail (`./monitoring/loki/`, `./monitoring/promtail/`):
    - Basic Loki configuration: **DONE**.
@@ -109,8 +112,8 @@ This document outlines the detailed implementation steps for Phase 1 of the chat
 5. Ensure services expose metrics (where applicable):
    - Keycloak: **DONE** (via `KC_METRICS_ENABLED=true`).
    - Redis: **DONE** (via `redis_exporter`).
-   - PostgreSQL: **PENDING** (Requires a Postgres exporter like `bitnami/postgres-exporter`).
-   - Nginx: **PENDING** (Requires `stub_status` module enabled and configured, or `nginx-prometheus-exporter`).
+   - PostgreSQL: **DONE** (via `postgres_exporter`).
+   - Nginx: **DONE** (via `nginx-prometheus-exporter`).
    - Custom Applications (Backend, etc.): **PENDING** (Application code to expose /metrics endpoint).
 
 ## Dependencies
