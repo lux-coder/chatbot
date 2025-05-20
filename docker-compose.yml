@@ -304,6 +304,40 @@ services:
           cpus: '0.25'
           memory: 128M
 
+  postgres_exporter:
+    image: bitnami/postgres-exporter:latest
+    networks:
+      - db_net
+      - monitoring_net
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/chatbot?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:1.1.0
+    command:
+      - '-nginx.scrape-uri=http://nginx/nginx_status'
+    networks:
+      - frontend_net
+      - monitoring_net
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
   prometheus:
     image: prom/prometheus:v2.47.2
     volumes:
@@ -324,6 +358,8 @@ services:
     depends_on:
       - keycloak # Ensure keycloak is up for scraping
       - redis_exporter # Ensure exporter is up
+      - postgres_exporter
+      - nginx_exporter
       # Add dependencies for other services you want to scrape, e.g., backend
     deploy:
       resources:
