@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'keycloak'
+    static_configs:
+      - targets: ['keycloak:8080'] # Keycloak might need /metrics path if not default
+    metrics_path: /metrics # KC_METRICS_ENABLED=true should expose this
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis_exporter:9121']
+
+  # Add other services here as they become ready to expose metrics
+  # - job_name: 'backend'
+  #   static_configs:
+  #     - targets: ['backend:8000'] # Assuming backend exposes /metrics
+  #   metrics_path: /metrics
+
+  # - job_name: 'nginx'
+  #   static_configs:
+  #     - targets: ['nginx:80'] # Nginx might need a stub_status module or vts_exporter
+  #   metrics_path: /metrics # Placeholder, depends on exporter 

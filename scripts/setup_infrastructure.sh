@@ -17,8 +17,10 @@ docker compose down -v
 echo -e "\n${YELLOW}Creating directories...${NC}"
 mkdir -p secrets
 mkdir -p nginx/certs
-# Ensure the init directory for PostgreSQL exists if needed by compose volume mount
-mkdir -p docker/services/postgres/init 
+mkdir -p docker/services/postgres/init
+mkdir -p monitoring/prometheus
+mkdir -p monitoring/loki
+mkdir -p monitoring/promtail
 
 # Remove old data from potential previous local bind mounts (optional, as named volumes are used)
 # rm -rf docker/services/redis/data/* # Redis uses named volume 'redis_data'
@@ -92,6 +94,56 @@ else
     exit 1
 fi
 
+# Start monitoring services
+echo -e "\n${YELLOW}Starting monitoring services...${NC}"
+docker compose up -d redis_exporter prometheus grafana loki promtail
+
+# Wait for monitoring services to be healthy
+echo -e "\n${YELLOW}Waiting for monitoring services to be healthy...${NC}"
+
+# Redis Exporter check
+echo -e "\n${YELLOW}Testing Redis Exporter...${NC}"
+if curl -s -f http://localhost:9121/metrics > /dev/null; then
+    echo -e "${GREEN}Redis Exporter is responding correctly${NC}"
+else
+    echo -e "${RED}Redis Exporter health check failed${NC}"
+    docker compose logs redis_exporter
+fi
+
+# Prometheus check
+echo -e "\n${YELLOW}Testing Prometheus...${NC}"
+if curl -s -f http://localhost:9090/-/healthy > /dev/null; then
+    echo -e "${GREEN}Prometheus is responding correctly${NC}"
+else
+    echo -e "${RED}Prometheus health check failed${NC}"
+    docker compose logs prometheus
+fi
+
+# Grafana check
+echo -e "\n${YELLOW}Testing Grafana...${NC}"
+if curl -s -f http://localhost:3001/api/health > /dev/null; then
+    echo -e "${GREEN}Grafana is responding correctly${NC}"
+else
+    echo -e "${RED}Grafana health check failed${NC}"
+    docker compose logs grafana
+fi
+
+# Loki check
+echo -e "\n${YELLOW}Testing Loki...${NC}"
+if curl -s -f http://localhost:3100/ready > /dev/null; then
+    echo -e "${GREEN}Loki is responding correctly${NC}"
+else
+    echo -e "${RED}Loki health check failed${NC}"
+    docker compose logs loki
+fi
+
 echo -e "\n${GREEN}Infrastructure setup completed successfully!${NC}"
-echo -e "\n${YELLOW}Core services (PostgreSQL, Redis, Keycloak) are running.${NC}"
-echo -e "${YELLOW}You can now proceed with the testing steps from the infrastructure_testing.md guide.${NC}" 
+echo -e "\n${YELLOW}All services are running:${NC}"
+echo -e "- Core services (PostgreSQL, Redis, Keycloak)"
+echo -e "- Monitoring (Redis Exporter, Prometheus, Grafana, Loki, Promtail)"
+echo -e "\n${YELLOW}You can access:${NC}"
+echo -e "- Grafana at http://localhost:3001 (default credentials: admin/admin)"
+echo -e "- Prometheus at http://localhost:9090"
+echo -e "- Redis Exporter metrics at http://localhost:9121/metrics"
+echo -e "- Loki at http://localhost:3100"
+echo -e "\n${YELLOW}You can now proceed with the testing steps from the infrastructure_testing.md guide.${NC}" 

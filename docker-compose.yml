@@ -286,12 +286,121 @@ services:
       - keycloak_admin_password
       - postgres_password
 
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.72.1
+    networks:
+      - db_net # Same network as Redis
+      - monitoring_net
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis} # Ensure this matches your Redis setup
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring_net
+      - backend_net # To scrape backend, etc.
+      - db_net      # To scrape redis_exporter, keycloak
+      - frontend_net # To scrape Keycloak (if on frontend_net), Nginx
+    depends_on:
+      - keycloak # Ensure keycloak is up for scraping
+      - redis_exporter # Ensure exporter is up
+      # Add dependencies for other services you want to scrape, e.g., backend
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  grafana:
+    image: grafana/grafana:10.1.5
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # You can add provisioning for datasources and dashboards here
+      # - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      # - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3001:3000" # Grafana runs on 3000, mapping to 3001 to avoid conflict with frontend
+    networks:
+      - monitoring_net
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  loki:
+    image: grafana/loki:2.9.2
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro # To discover containers
+      # You might need to map log directories from host if not using docker.sock for discovery
+      # - /var/log:/var/log:ro 
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - monitoring_net
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
   keycloak_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
     driver: local
 
 secrets:
