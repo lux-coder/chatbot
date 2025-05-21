@@ -9,7 +9,7 @@ from app.schemas import (
     FeedbackResponse,
 )
 from app.services.auth import get_current_user, get_current_user_roles, UserToken
-from app.core.tenancy import require_tenant
+from app.core.security.tenancy import require_tenant
 from app.services.chat import ChatService
 from app.api.deps import get_chat_service
 

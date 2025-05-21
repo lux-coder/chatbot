@@ -1,3 +1,9 @@
+"""
+Tenant Isolation Module
+
+This module provides tenant context management and isolation for multi-tenant applications.
+"""
+
 from contextvars import ContextVar
 from uuid import UUID
 from typing import Optional
@@ -6,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 import logging
 import json
+from ..monitoring import log_security_event
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +38,21 @@ class TenantContextManager:
 
     async def __aenter__(self):
         self.token = tenant_context.set(self.tenant_id)
+        await log_security_event(
+            event_type="tenant_context_set",
+            tenant_id=self.tenant_id
+        )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         tenant_context.reset(self.token)
+        if exc_type:
+            await log_security_event(
+                event_type="tenant_context_error",
+                tenant_id=self.tenant_id,
+                error_type=str(exc_type.__name__),
+                error_message=str(exc_val)
+            )
 
 class TenantMiddleware(BaseHTTPMiddleware):
     """Middleware to extract and set tenant context from request."""
@@ -73,8 +91,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         try:
             tenant_uuid = UUID(tenant_id)
-            logger.info("Tenant context set",
-                       extra={'tenant_id': str(tenant_uuid)})
+            await log_security_event(
+                event_type="tenant_request",
+                tenant_id=tenant_uuid,
+                path=str(request.url.path),
+                method=request.method
+            )
         except ValueError:
             logger.error("Invalid tenant ID format",
                         extra={'tenant_id': tenant_id})
@@ -86,7 +108,6 @@ class TenantMiddleware(BaseHTTPMiddleware):
         async with TenantContextManager(tenant_uuid):
             response = await call_next(request)
             return response
-
 
 # Dependency for FastAPI routes
 async def require_tenant(tenant_id: str = Depends(get_current_tenant)) -> UUID:

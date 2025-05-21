@@ -19,7 +19,7 @@ router = APIRouter()
 class GenerationRequest(BaseModel):
     """Request model for text generation"""
     message: str = Field(..., description="The user's message")
-    context: List[Dict[str, Any]] = Field(default_list, description="Previous conversation context")
+    context: List[Dict[str, Any]] = Field(default_factory=list, description="Previous conversation context")
     model_type: str = Field(default="openai", description="Model to use (openai/llama)")
     max_tokens: Optional[int] = Field(default=1000, description="Maximum tokens to generate")
     temperature: Optional[float] = Field(default=0.7, description="Temperature for generation")

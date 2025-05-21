@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from starlette.middleware import Middleware
 from app.api.v1.chat import router as chat_router
 from app.api.v1.health import router as health_router
-from app.core.tenancy import TenantMiddleware
+from app.core.security.tenancy import TenantMiddleware
 import logging
 import sys
 from pythonjsonlogger import jsonlogger

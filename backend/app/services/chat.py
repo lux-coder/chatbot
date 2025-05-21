@@ -17,7 +17,7 @@ from app.core.config import Settings
 from app.core.monitoring import log_chat_event
 from app.services.ai import AIService, AIServiceError, ModelType
 from app.core.security import PIIHandler
-from app.core.exceptions import TenantMismatchError
+from app.core.security.exceptions import TenantMismatchError
 
 class ChatService:
     """

@@ -1,14 +1,15 @@
 """
-Security Module
+PII Protection Module
 
-This module provides security-related functionality including PII detection and masking.
+This module provides functionality for detecting and masking personally identifiable
+information (PII) in text using both regex patterns and NLP-based approaches.
 """
 
 import re
 from typing import Dict, List, Set, Optional
 import spacy
 from pydantic import BaseModel
-from app.core.monitoring import log_security_event
+from ..monitoring import log_security_event
 
 class PIIPattern(BaseModel):
     """Configuration for a PII pattern"""

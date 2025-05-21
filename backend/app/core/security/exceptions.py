@@ -1,12 +1,35 @@
 """
-Exceptions Module
+Security Exceptions Module
 
-This module defines custom exceptions used throughout the application.
+This module defines custom exceptions used throughout the application for
+security-related error handling.
 """
 
 from fastapi import HTTPException, status
+from ..monitoring import log_security_event
 
-class TenantMismatchError(HTTPException):
+class SecurityException(HTTPException):
+    """Base class for security-related exceptions."""
+    
+    def __init__(self, status_code: int, detail: str):
+        """
+        Initialize the exception.
+        
+        Args:
+            status_code: HTTP status code
+            detail: Detailed error message
+        """
+        super().__init__(status_code=status_code, detail=detail)
+        # Log security event asynchronously
+        # Note: We can't use await here since __init__ can't be async
+        log_security_event(
+            event_type="security_exception",
+            error_type=self.__class__.__name__,
+            error_message=detail,
+            status_code=status_code
+        )
+
+class TenantMismatchError(SecurityException):
     """
     Raised when a resource is accessed by a user from a different tenant.
     """
@@ -23,7 +46,7 @@ class TenantMismatchError(HTTPException):
             detail=detail
         )
 
-class AIServiceError(HTTPException):
+class AIServiceError(SecurityException):
     """
     Raised when there is an error communicating with the AI service.
     """
@@ -40,7 +63,7 @@ class AIServiceError(HTTPException):
             detail=detail
         )
 
-class ValidationError(HTTPException):
+class ValidationError(SecurityException):
     """
     Raised when input validation fails.
     """
@@ -57,7 +80,7 @@ class ValidationError(HTTPException):
             detail=detail
         )
 
-class ResourceNotFoundError(HTTPException):
+class ResourceNotFoundError(SecurityException):
     """
     Raised when a requested resource is not found.
     """
@@ -74,7 +97,7 @@ class ResourceNotFoundError(HTTPException):
             detail=detail
         )
 
-class AuthenticationError(HTTPException):
+class AuthenticationError(SecurityException):
     """
     Raised when authentication fails.
     """
@@ -91,7 +114,7 @@ class AuthenticationError(HTTPException):
             detail=detail
         )
 
-class AuthorizationError(HTTPException):
+class AuthorizationError(SecurityException):
     """
     Raised when a user is not authorized to perform an action.
     """
@@ -108,7 +131,7 @@ class AuthorizationError(HTTPException):
             detail=detail
         )
 
-class RateLimitError(HTTPException):
+class RateLimitError(SecurityException):
     """
     Raised when rate limits are exceeded.
     """
