@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
 
-from app.models.chat import Conversation, Message
+from app.models.chat import Conversation, Message, Feedback
 from app.repositories.base import TenantRepository
 from app.core.tenancy import get_current_tenant, TenantContextManager
 
@@ -126,12 +126,35 @@ class MessageRepository(TenantRepository[Message]):
         return await self.count(**filters)
 
 
+class FeedbackRepository(TenantRepository[Feedback]):
+    """Repository for managing Feedback entities."""
+
+    def __init__(self):
+        super().__init__(Feedback)
+
+    async def create_feedback(
+        self,
+        message_id: UUID,
+        user_id: UUID,
+        rating: int,
+        comment: Optional[str] = None,
+    ) -> Feedback:
+        """Create feedback for a message."""
+        return await self.create(
+            message_id=message_id,
+            user_id=user_id,
+            rating=rating,
+            comment=comment,
+        )
+
+
 class ChatRepository:
     """High level repository combining conversation and message operations."""
 
     def __init__(self) -> None:
         self.conversation_repo = ConversationRepository()
         self.message_repo = MessageRepository()
+        self.feedback_repo = FeedbackRepository()
 
     async def get_conversation(self, conversation_id: UUID) -> Optional[Conversation]:
         """Retrieve a conversation by its ID."""
@@ -178,6 +201,21 @@ class ChatRepository:
             content=content,
             role=role,
             metadata=metadata,
+        )
+
+    async def create_feedback(
+        self,
+        message_id: UUID,
+        user_id: UUID,
+        rating: int,
+        comment: Optional[str] = None,
+    ) -> Feedback:
+        """Store feedback for a message."""
+        return await self.feedback_repo.create_feedback(
+            message_id=message_id,
+            user_id=user_id,
+            rating=rating,
+            comment=comment,
         )
 
     async def close(self) -> None:

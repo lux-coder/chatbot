@@ -226,4 +226,82 @@ class ChatService:
                 error_type=str(type(e).__name__),
                 error_message=str(e)
             )
-            raise 
+            raise
+
+    async def get_chat_history(
+        self,
+        user_id: UUID,
+        tenant_id: UUID,
+        conversation_id: UUID,
+    ) -> Dict[str, Any]:
+        """Return structured chat history for a conversation."""
+        try:
+            conversation = await self.chat_repository.get_conversation(conversation_id)
+            if not conversation or conversation.tenant_id != tenant_id or conversation.user_id != user_id:
+                raise HTTPException(status_code=404, detail="Conversation not found")
+
+            messages = await self.chat_repository.get_messages(conversation_id)
+            history = [
+                {
+                    "message_id": msg.id,
+                    "content": msg.content,
+                    "role": msg.role,
+                    "timestamp": msg.timestamp,
+                    "metadata": msg.metadata,
+                }
+                for msg in messages
+            ]
+            return {
+                "conversation_id": conversation.id,
+                "title": conversation.title,
+                "last_message_at": conversation.last_message_at,
+                "messages": history,
+            }
+        except Exception as e:
+            await log_chat_event(
+                event_type="history_error",
+                user_id=user_id,
+                tenant_id=tenant_id,
+                conversation_id=conversation_id,
+                error_type=str(type(e).__name__),
+                error_message=str(e),
+            )
+            raise
+
+    async def store_feedback(
+        self,
+        message_id: UUID,
+        user_id: UUID,
+        rating: int,
+        comment: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Persist feedback for a message."""
+        try:
+            feedback = await self.chat_repository.create_feedback(
+                message_id=message_id,
+                user_id=user_id,
+                rating=rating,
+                comment=comment,
+            )
+            await log_chat_event(
+                event_type="feedback_received",
+                user_id=user_id,
+                message_id=message_id,
+                rating=rating,
+            )
+            return {
+                "feedback_id": feedback.id,
+                "message_id": feedback.message_id,
+                "rating": feedback.rating,
+                "comment": feedback.comment,
+                "created_at": feedback.created_at,
+            }
+        except Exception as e:
+            await log_chat_event(
+                event_type="feedback_error",
+                user_id=user_id,
+                message_id=message_id,
+                error_type=str(type(e).__name__),
+                error_message=str(e),
+            )
+            raise
