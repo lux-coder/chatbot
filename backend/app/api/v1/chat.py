@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from uuid import UUID
-from backend.app.schemas import (
+from app.schemas import (
     ChatMessageRequest,
     ChatMessageResponse,
     ChatHistoryResponse,
     FeedbackRequest,
     FeedbackResponse,
 )
-from backend.app.services.auth import get_current_user, get_current_user_roles, UserToken
-from backend.app.core.tenancy import require_tenant
+from app.services.auth import get_current_user, get_current_user_roles, UserToken
+from app.core.tenancy import require_tenant
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 

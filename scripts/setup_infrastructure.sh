@@ -97,7 +97,7 @@ export KEYCLOAK_CLIENT_SECRET=$(cat secrets/keycloak_secret.txt)
 
 # Start core services
 echo -e "\n${YELLOW}Starting core services...${NC}"
-docker compose up -d postgres redis keycloak
+docker compose up -d --build postgres redis keycloak
 
 # Wait for services to be healthy
 echo -e "\n${YELLOW}Waiting for services to be healthy...${NC}"

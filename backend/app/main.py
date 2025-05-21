@@ -1,8 +1,26 @@
 from fastapi import FastAPI
 from starlette.middleware import Middleware
-from backend.app.api.v1.chat import router as chat_router
-from backend.app.api.v1.health import router as health_router
-from backend.app.core.tenancy import TenantMiddleware
+from app.api.v1.chat import router as chat_router
+from app.api.v1.health import router as health_router
+from app.core.tenancy import TenantMiddleware
+import logging
+import sys
+from pythonjsonlogger import jsonlogger
+
+# Enhanced logging configuration
+logger = logging.getLogger()
+logHandler = logging.StreamHandler(sys.stdout)
+formatter = jsonlogger.JsonFormatter(
+    fmt='%(asctime)s %(levelname)s %(name)s %(message)s',
+    json_ensure_ascii=False
+)
+logHandler.setFormatter(formatter)
+logger.addHandler(logHandler)
+logger.setLevel(logging.INFO)
+
+# Remove any existing handlers to avoid duplicates
+for handler in logger.handlers[:-1]:
+    logger.removeHandler(handler)
 
 app = FastAPI(
     title="Secure Chatbot API",

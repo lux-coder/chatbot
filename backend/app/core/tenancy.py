@@ -4,6 +4,10 @@ from typing import Optional
 from fastapi import HTTPException, Depends
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+import logging
+import json
+
+logger = logging.getLogger(__name__)
 
 # Context variable to store the current tenant ID
 tenant_context: ContextVar[UUID] = ContextVar('tenant_id')
@@ -36,25 +40,53 @@ class TenantMiddleware(BaseHTTPMiddleware):
     """Middleware to extract and set tenant context from request."""
     
     async def dispatch(self, request: Request, call_next):
-        tenant_id = request.headers.get('X-Tenant-ID')
-        
+        # Log request details in a structured way
+        request_headers = dict(request.headers)
+        # Remove sensitive information from headers before logging
+        if 'authorization' in request_headers:
+            request_headers['authorization'] = '[REDACTED]'
+
+        logger.info("Processing request",
+                   extra={
+                       'request_path': str(request.url.path),
+                       'request_method': request.method,
+                       'headers': request_headers,
+                       'client_host': request.client.host if request.client else None
+                   })
+
+        # Bypass tenant enforcement for public endpoints
+        public_paths = ["/api/v1/healthz", "/docs", "/openapi.json", "/redoc"]
+        if request.url.path in public_paths:
+            logger.debug("Bypassing tenant check for public path", 
+                        extra={'path': request.url.path})
+            return await call_next(request)
+
+        tenant_id = request.headers.get("X-Tenant-ID")
+
         if not tenant_id:
+            logger.warning("Missing tenant ID in request",
+                         extra={'path': request.url.path})
             raise HTTPException(
                 status_code=400,
                 detail="X-Tenant-ID header is required"
             )
-        
+
         try:
             tenant_uuid = UUID(tenant_id)
+            logger.info("Tenant context set",
+                       extra={'tenant_id': str(tenant_uuid)})
         except ValueError:
+            logger.error("Invalid tenant ID format",
+                        extra={'tenant_id': tenant_id})
             raise HTTPException(
                 status_code=400,
                 detail="Invalid tenant ID format"
             )
-        
+
         async with TenantContextManager(tenant_uuid):
             response = await call_next(request)
             return response
+
 
 # Dependency for FastAPI routes
 async def require_tenant(tenant_id: str = Depends(get_current_tenant)) -> UUID:
