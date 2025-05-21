@@ -62,12 +62,12 @@ async def get_chat_history(
     Retrieve chat history for the authenticated user/tenant.
     """
     try:
-        messages = await chat_service.get_chat_history(
+        history = await chat_service.get_chat_history(
             user_id=user.id,
             tenant_id=tenant_id,
             conversation_id=conversation_id
         )
-        return ChatHistoryResponse(messages=messages)
+        return ChatHistoryResponse(**history)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

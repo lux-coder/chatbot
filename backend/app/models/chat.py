@@ -104,4 +104,31 @@ class Message(TenantModel):
     @property
     def is_system_message(self) -> bool:
         """Check if the message is a system message."""
-        return self.role == "system" 
+        return self.role == "system"
+
+
+class Feedback(TenantModel):
+    """Feedback on a specific message."""
+
+    message = fields.ForeignKeyField(
+        'models.Message',
+        related_name='feedback',
+        on_delete=fields.CASCADE
+    )
+    user = fields.ForeignKeyField(
+        'models.User',
+        related_name='feedback',
+        on_delete=fields.CASCADE
+    )
+    rating = fields.IntField()
+    comment = fields.TextField(null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "feedback"
+
+    def __str__(self) -> str:
+        return (
+            f"Feedback(message={self.message_id}, user={self.user_id}, "
+            f"rating={self.rating})"
+        )
