@@ -2,7 +2,8 @@ fastapi>=0.104.1
 uvicorn>=0.24.0
 tortoise-orm>=0.20.0  # Using Tortoise ORM as per requirements instead of SQLAlchemy
 aerich>=0.7.2  # Tortoise ORM migrations
-python-jose[cryptography]>=3.3.0
+cryptography>=42.0.0
+python-jose[cryptography]==3.3.0  # Pin specific version for stability
 passlib[bcrypt]>=1.7.4
 pydantic>=2.5.0
 pydantic-settings>=2.0
