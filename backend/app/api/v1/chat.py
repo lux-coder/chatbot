@@ -34,11 +34,7 @@ async def send_message(
             conversation_id=request.conversation_id
         )
         
-        return ChatMessageResponse(
-            conversation_id=response["conversation_id"],
-            message=response["message"],
-            created_at=response["created_at"]
-        )
+        return ChatMessageResponse(**response)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
