@@ -1,7 +1,7 @@
 from typing import Dict
 from fastapi import APIRouter
 import redis
-from app.core.config import get_settings
+from ..core.settings import get_settings
 import os
 
 router = APIRouter()
