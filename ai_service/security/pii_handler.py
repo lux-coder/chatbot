@@ -1,118 +1,201 @@
 """
 PII Handler Module
 
-This module provides a unified interface for PII detection and masking,
-combining the functionality of the detector and masker components.
+This module provides functionality for detecting and masking personally
+identifiable information (PII) in text data.
 """
 
-from typing import Dict, Optional, List, Any
+import re
 import logging
-from .pii_detector import PIIDetector, PIIMatch
-from .data_masker import DataMasker, MaskingConfig
+from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+class PIIDetector:
+    """
+    Detector for various types of PII in text.
+    
+    This class provides methods to detect common PII patterns like:
+    - Email addresses
+    - Phone numbers
+    - Social security numbers
+    - Credit card numbers
+    - IP addresses
+    - Names (requires NLP)
+    """
+    
+    def __init__(self):
+        """Initialize the PII detector"""
+        # Compile regex patterns for efficiency
+        self.email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
+        self.phone_pattern = re.compile(r'\b(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b')
+        self.ssn_pattern = re.compile(r'\b\d{3}-\d{2}-\d{4}\b')
+        self.credit_card_pattern = re.compile(r'\b(?:\d{4}[- ]?){3}\d{4}\b')
+        self.ip_pattern = re.compile(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b')
+    
+    async def detect_pii(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Detect all PII in the provided text.
+        
+        Args:
+            text: The text to scan for PII
+            
+        Returns:
+            List of PII matches with type, span, and value
+        """
+        if not text:
+            return []
+            
+        # Collect all PII matches
+        all_matches = []
+        
+        # Detect emails
+        for match in self.email_pattern.finditer(text):
+            all_matches.append({
+                "type": "email",
+                "span": (match.start(), match.end()),
+                "value": match.group()
+            })
+        
+        # Detect phone numbers
+        for match in self.phone_pattern.finditer(text):
+            all_matches.append({
+                "type": "phone",
+                "span": (match.start(), match.end()),
+                "value": match.group()
+            })
+        
+        # Detect SSNs
+        for match in self.ssn_pattern.finditer(text):
+            all_matches.append({
+                "type": "ssn",
+                "span": (match.start(), match.end()),
+                "value": match.group()
+            })
+        
+        # Detect credit card numbers
+        for match in self.credit_card_pattern.finditer(text):
+            all_matches.append({
+                "type": "credit_card",
+                "span": (match.start(), match.end()),
+                "value": match.group()
+            })
+        
+        # Detect IP addresses
+        for match in self.ip_pattern.finditer(text):
+            all_matches.append({
+                "type": "ip",
+                "span": (match.start(), match.end()),
+                "value": match.group()
+            })
+        
+        # Sort by span start position for easier processing
+        all_matches.sort(key=lambda x: x["span"][0])
+        
+        return all_matches
+
 class PIIHandler:
     """
-    Main class for handling PII detection and masking in text.
+    Handler for detecting and masking PII in text.
     
-    This class combines the PIIDetector and DataMasker to provide
-    a complete solution for identifying and protecting PII.
+    This class combines detection and masking to provide a complete
+    solution for PII protection.
     """
     
-    def __init__(
-        self,
-        custom_masking_configs: Optional[Dict[str, MaskingConfig]] = None,
-        enable_logging: bool = True
-    ):
+    def __init__(self, enable_logging: bool = False):
         """
         Initialize the PII handler.
         
         Args:
-            custom_masking_configs: Optional custom masking configurations
-            enable_logging: Whether to log PII detection events
+            enable_logging: Whether to log PII detection (without the actual PII)
         """
         self.detector = PIIDetector()
-        self.masker = DataMasker(custom_masking_configs)
         self.enable_logging = enable_logging
-
-    def process_text(self, text: str) -> str:
+    
+    async def process_text(self, text: str) -> str:
         """
         Process text to detect and mask PII.
         
         Args:
-            text: Input text that may contain PII
+            text: The text to process
             
         Returns:
             Text with PII masked
         """
-        # Detect PII
-        pii_matches = self.detector.detect(text)
-        
-        if pii_matches and self.enable_logging:
-            self._log_pii_detection(text, pii_matches)
-        
-        # Mask detected PII
-        masked_text = self.masker.mask_text(text, pii_matches)
-        
-        # Validate masking
-        if not self.detector.validate_pii_removal(text, masked_text):
-            logger.warning("PII masking validation failed - some PII may remain")
-        
-        return masked_text
-
-    def process_dict(self, data: Dict[str, Any], sensitive_keys: List[str]) -> Dict[str, Any]:
-        """
-        Process a dictionary to mask PII in specified fields.
-        
-        Args:
-            data: Dictionary that may contain PII
-            sensitive_keys: List of keys that might contain PII
+        if not text:
+            return text
             
-        Returns:
-            Dictionary with PII masked in sensitive fields
-        """
-        result = data.copy()
+        # Detect PII
+        pii_matches = await self.detector.detect_pii(text)
         
-        for key in sensitive_keys:
-            if key in result and isinstance(result[key], str):
-                result[key] = self.process_text(result[key])
+        if not pii_matches:
+            return text
+            
+        # Log PII detection (without exposing actual PII)
+        if self.enable_logging:
+            pii_types = [match["type"] for match in pii_matches]
+            logger.info(f"Detected {len(pii_matches)} PII items of types: {', '.join(pii_types)}")
         
-        return result
-
-    def _log_pii_detection(self, text: str, matches: List[PIIMatch]) -> None:
+        # Mask PII
+        return await self._mask_pii(text, pii_matches)
+    
+    async def _mask_pii(self, text: str, matches: List[Dict[str, Any]]) -> str:
         """
-        Log PII detection events without revealing the actual PII.
+        Mask PII in the text.
         
         Args:
             text: Original text
-            matches: List of PII matches found
-        """
-        if not self.enable_logging:
-            return
-            
-        # Create a safe logging version
-        masked_text = self.masker.mask_text(text, matches)
-        safe_log_text = self.masker.unmask_for_logging(masked_text, text)
-        
-        logger.info(
-            "PII detected and masked",
-            extra={
-                "pii_types": [m.pii_type for m in matches],
-                "match_count": len(matches),
-                "masked_text": safe_log_text
-            }
-        )
-
-    def validate_text(self, text: str) -> bool:
-        """
-        Check if text contains any PII.
-        
-        Args:
-            text: Text to check for PII
+            matches: List of PII matches with span and type information
             
         Returns:
-            True if no PII is detected, False otherwise
+            Text with PII masked
         """
-        matches = self.detector.detect(text)
-        return len(matches) == 0 
+        # If no matches, return the original text
+        if not matches:
+            return text
+            
+        # Start with the original text
+        masked_text = ""
+        last_end = 0
+        
+        # Replace each match with an appropriate mask
+        for match in matches:
+            start, end = match["span"]
+            pii_type = match["type"]
+            
+            # Add text before the match
+            masked_text += text[last_end:start]
+            
+            # Add the appropriate mask based on PII type
+            masked_text += self._get_mask_for_type(pii_type)
+            
+            # Update the last end position
+            last_end = end
+        
+        # Add any remaining text after the last match
+        masked_text += text[last_end:]
+        
+        return masked_text
+    
+    def _get_mask_for_type(self, pii_type: str) -> str:
+        """
+        Get an appropriate mask string for a PII type.
+        
+        Args:
+            pii_type: Type of PII to mask
+            
+        Returns:
+            Mask string for the PII type
+        """
+        masks = {
+            "email": "[EMAIL]",
+            "phone": "[PHONE]",
+            "ssn": "[SSN]",
+            "credit_card": "[CREDIT_CARD]",
+            "ip": "[IP_ADDRESS]",
+            "name": "[NAME]",
+            "address": "[ADDRESS]",
+            "date": "[DATE]"
+        }
+        
+        return masks.get(pii_type, "[REDACTED]") 

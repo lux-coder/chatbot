@@ -22,8 +22,8 @@ class Settings(BaseSettings):
         AI_DEFAULT_MODEL: Default model to use (openai/llama)
         AI_TIMEOUT_SECONDS: Timeout for AI service requests
         AI_MAX_RETRIES: Maximum number of retries for failed requests
-        AI_OPENAI_MODEL: OpenAI model to use
-        AI_LLAMA_MODEL_PATH: Path to local Llama model
+        AI_RETRY_DELAY: Delay between retries in seconds
+        AI_CACHE_TTL: Cache TTL for AI responses in seconds
     """
     # Database Settings
     POSTGRES_USER: str
@@ -45,8 +45,14 @@ class Settings(BaseSettings):
     AI_DEFAULT_MODEL: str = "openai"
     AI_TIMEOUT_SECONDS: float = 30.0
     AI_MAX_RETRIES: int = 3
-    AI_OPENAI_MODEL: str = "gpt-3.5-turbo"
-    AI_LLAMA_MODEL_PATH: Optional[str] = None
+    AI_RETRY_DELAY: float = 1.0
+    AI_CACHE_TTL: int = 86400  # 24 hours in seconds
+    
+    # Redis settings
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: Optional[str] = None
     
     @property
     def postgres_url(self) -> str:
