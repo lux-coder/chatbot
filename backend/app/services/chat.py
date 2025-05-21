@@ -211,9 +211,12 @@ class ChatService:
             )
             
             return {
+                "message_id": ai_message.id,
                 "conversation_id": conversation.id,
-                "message": ai_message.content,
-                "created_at": ai_message.created_at
+                "content": ai_message.content,
+                "role": ai_message.role,
+                "timestamp": ai_message.timestamp,
+                "metadata": ai_message.metadata,
             }
             
         except Exception as e:
