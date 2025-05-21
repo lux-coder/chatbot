@@ -1,9 +1,10 @@
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
+
 from app.models.chat import Conversation, Message
 from app.repositories.base import TenantRepository
-from app.core.tenancy import get_current_tenant
+from app.core.tenancy import get_current_tenant, TenantContextManager
 
 
 class ConversationRepository(TenantRepository[Conversation]):
@@ -122,4 +123,63 @@ class MessageRepository(TenantRepository[Message]):
         filters = {"conversation_id": conversation_id}
         if role:
             filters["role"] = role
-        return await self.count(**filters) 
+        return await self.count(**filters)
+
+
+class ChatRepository:
+    """High level repository combining conversation and message operations."""
+
+    def __init__(self) -> None:
+        self.conversation_repo = ConversationRepository()
+        self.message_repo = MessageRepository()
+
+    async def get_conversation(self, conversation_id: UUID) -> Optional[Conversation]:
+        """Retrieve a conversation by its ID."""
+        return await self.conversation_repo.get_by_id(conversation_id)
+
+    async def create_conversation(
+        self,
+        user_id: UUID,
+        tenant_id: UUID,
+        title: str = "New Conversation",
+    ) -> Conversation:
+        """Create a new conversation for a tenant."""
+        async with TenantContextManager(tenant_id):
+            return await self.conversation_repo.create_conversation(
+                user_id=user_id,
+                title=title,
+            )
+
+    async def get_messages(
+        self,
+        conversation_id: UUID,
+        limit: int = 50,
+        before_timestamp: Optional[datetime] = None,
+    ) -> List[Message]:
+        """Retrieve messages for a conversation."""
+        return await self.message_repo.get_conversation_messages(
+            conversation_id=conversation_id,
+            limit=limit,
+            before_timestamp=before_timestamp,
+        )
+
+    async def create_message(
+        self,
+        conversation_id: UUID,
+        content: str,
+        role: str,
+        user_id: Optional[UUID] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Message:
+        """Create a message in a conversation."""
+        # user_id parameter is accepted for interface compatibility
+        return await self.message_repo.create_message(
+            conversation_id=conversation_id,
+            content=content,
+            role=role,
+            metadata=metadata,
+        )
+
+    async def close(self) -> None:
+        """Placeholder for compatibility with dependency lifecycle."""
+        return None
