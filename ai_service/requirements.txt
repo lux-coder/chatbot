@@ -14,3 +14,4 @@ tenacity>=8.2.3
 httpx>=0.25.0
 transformers>=4.36.0  # For text processing
 torch>=2.1.0  # For local model inference 
+spacy>=3.7.2
