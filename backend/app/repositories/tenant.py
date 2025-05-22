@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from app.models.tenant import Tenant
 from app.repositories.base import BaseRepository
@@ -29,6 +29,10 @@ class TenantRepository(BaseRepository[Tenant]):
     async def get_active_tenant(self, tenant_id: UUID) -> Optional[Tenant]:
         """Get an active tenant by ID."""
         return await Tenant.get_active_tenant(tenant_id)
+
+    async def find_by_name(self, name: str) -> List[Tenant]:
+        """Find tenants by name."""
+        return await self.model.filter(name=name, is_active=True)
 
     async def update_tenant_settings(
         self,

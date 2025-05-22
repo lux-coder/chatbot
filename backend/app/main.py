@@ -8,6 +8,7 @@ import logging
 import sys
 from pythonjsonlogger import jsonlogger
 from contextlib import asynccontextmanager
+from app.api.v1 import chat, tenant  # Add tenant import
 
 # Enhanced logging configuration
 logger = logging.getLogger()
@@ -54,6 +55,8 @@ app.add_middleware(TenantMiddleware)
 
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+app.include_router(tenant.router, prefix="/api/v1")  # Add tenant router
 
 @app.get("/", tags=["root"])
 def root():

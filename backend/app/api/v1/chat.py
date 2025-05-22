@@ -8,7 +8,7 @@ from app.schemas import (
     FeedbackRequest,
     FeedbackResponse,
 )
-from app.services.auth import get_current_user, get_current_user_roles, UserToken
+from app.services.auth import get_current_user, get_current_user_roles, UserToken, AuthService
 from app.core.security.tenancy import require_tenant
 from app.services.chat import ChatService
 from app.api.deps import get_chat_service
@@ -24,15 +24,25 @@ async def send_message(
     request: ChatMessageRequest,
     user: UserToken = Depends(get_current_user),
     tenant_id: UUID = Depends(require_tenant),
-    roles: List[str] = Depends(get_current_user_roles),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     """
     Submit a user message and receive an AI response.
     """
     try:
+        # Create AuthService to ensure user exists in database
+        auth_service = AuthService()
+        db_user = await auth_service.sync_user_from_keycloak(user, tenant_id)
+        
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to synchronize user data"
+            )
+        
+        # Process message with the synchronized user ID
         response = await chat_service.process_message(
-            user_id=user.sub,
+            user_id=UUID(user.sub),  # Use Keycloak ID directly
             tenant_id=tenant_id,
             message=request.message,
             conversation_id=request.conversation_id
@@ -77,8 +87,18 @@ async def get_chat_history(
     Retrieve chat history for the authenticated user/tenant.
     """
     try:
+        # Create AuthService to ensure user exists in database
+        auth_service = AuthService()
+        db_user = await auth_service.sync_user_from_keycloak(user, tenant_id)
+        
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to synchronize user data"
+            )
+            
         history = await chat_service.get_chat_history(
-            user_id=user.sub,
+            user_id=UUID(user.sub),  # Use Keycloak ID directly
             tenant_id=tenant_id,
             conversation_id=conversation_id
         )
@@ -106,9 +126,19 @@ async def submit_feedback(
     Submit feedback on an AI response.
     """
     try:
+        # Create AuthService to ensure user exists in database
+        auth_service = AuthService()
+        db_user = await auth_service.sync_user_from_keycloak(user, tenant_id)
+        
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to synchronize user data"
+            )
+            
         feedback = await chat_service.store_feedback(
             message_id=request.message_id,
-            user_id=user.sub,
+            user_id=UUID(user.sub),  # Use Keycloak ID directly
             rating=request.rating,
             comment=request.comment
         )

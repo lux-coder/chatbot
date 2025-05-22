@@ -16,12 +16,13 @@ class UserRepository(TenantRepository[User]):
         self,
         username: str,
         email: str,
+        id: Optional[UUID] = None,
         password: Optional[str] = None,
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         is_superuser: bool = False,
     ) -> User:
-        """Create a new user with optional password."""
+        """Create a new user with optional ID and password."""
         user_data = {
             "username": username,
             "email": email,
@@ -29,6 +30,9 @@ class UserRepository(TenantRepository[User]):
             "last_name": last_name,
             "is_superuser": is_superuser,
         }
+        
+        if id:
+            user_data["id"] = id
         
         if password:
             user_data["hashed_password"] = User.hash_password(password)

@@ -72,8 +72,15 @@ class TenantMiddleware(BaseHTTPMiddleware):
                        'client_host': request.client.host if request.client else None
                    })
 
-        # Bypass tenant enforcement for public endpoints
-        public_paths = ["/api/v1/healthz", "/docs", "/openapi.json", "/redoc"]
+        # Bypass tenant enforcement for public endpoints and tenant discovery endpoint
+        public_paths = [
+            "/api/v1/healthz", 
+            "/docs", 
+            "/openapi.json", 
+            "/redoc",
+            "/api/v1/tenant/info"  # Add tenant discovery endpoint to exemptions
+        ]
+        
         if request.url.path in public_paths:
             logger.debug("Bypassing tenant check for public path", 
                         extra={'path': request.url.path})

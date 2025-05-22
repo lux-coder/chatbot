@@ -4,13 +4,14 @@ Dependencies Module
 This module provides FastAPI dependency injection functions for services and repositories.
 """
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable, Awaitable
 from fastapi import Depends
 
 from app.core.config import Settings, get_settings
 from app.repositories.chat import ChatRepository
 from app.services.chat import ChatService
 from app.services.ai import AIService
+from app.services.tenant import TenantService
 
 async def get_chat_repository() -> AsyncGenerator[ChatRepository, None]:
     """
@@ -53,4 +54,8 @@ async def get_chat_service(
         yield service
     finally:
         # Any cleanup needed for the chat service
-        pass 
+        pass
+
+def get_tenant_service() -> TenantService:
+    """Dependency for getting a TenantService instance."""
+    return TenantService() 

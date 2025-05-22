@@ -102,4 +102,57 @@ class TenantService:
                 severity="ERROR"
             )
             raise TenantMismatchError(f"Tenant {tenant_id} not found or inactive")
-        return True 
+        return True
+        
+    async def get_or_create_tenant_for_user(self, user_id: str) -> dict:
+        """
+        Get or create a tenant for a user.
+        In multi-tenant scenarios, would include tenant assignment logic.
+        
+        Args:
+            user_id: ID of the user from Keycloak
+            
+        Returns:
+            Tenant details
+        """
+        try:
+            # For now, simple approach: one tenant per user
+            tenant_name = f"Tenant for user {user_id}"
+            
+            # In a real multi-tenant app, this would use a user-to-tenant mapping table
+            # Here we use a simple name-based lookup for demonstration
+            tenants = await self.tenant_repo.find_by_name(tenant_name)
+            
+            if tenants:
+                tenant = tenants[0]
+            else:
+                # Create new tenant for this user
+                tenant_id = await self.create_tenant(name=tenant_name)
+                tenant = await self.tenant_repo.get_by_id(tenant_id)
+                
+                await log_security_event(
+                    event_type="TENANT_CREATED_FOR_USER",
+                    tenant_id=str(tenant.id),
+                    user_id=user_id,
+                    details={"name": tenant_name}
+                )
+            
+            return {
+                "id": tenant.id,
+                "name": tenant.name,
+                "settings": tenant.settings,
+                "created_at": tenant.created_at,
+                "is_active": tenant.is_active
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting/creating tenant for user {user_id}: {str(e)}")
+            await log_security_event(
+                event_type="TENANT_USER_ASSIGNMENT_ERROR",
+                user_id=user_id,
+                details={
+                    "error": str(e)
+                },
+                severity="ERROR"
+            )
+            raise 
