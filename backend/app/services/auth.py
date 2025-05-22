@@ -271,8 +271,27 @@ class AuthService:
                     detail="Invalid token signature"
                 )
                 
-            # Construct public key in PEM format
-            public_key = f"-----BEGIN PUBLIC KEY-----\n{key['x5c'][0]}\n-----END PUBLIC KEY-----"
+            # Fix: Correct PEM format for X.509 certificate
+            if 'x5c' in key and key['x5c']:
+                # Format as X.509 certificate 
+                public_key = f"-----BEGIN CERTIFICATE-----\n{key['x5c'][0]}\n-----END CERTIFICATE-----"
+            else:
+                # Fallback to RSA key if no x5c
+                n = base64.urlsafe_b64decode(key['n'] + '=' * (-len(key['n']) % 4))
+                e = base64.urlsafe_b64decode(key['e'] + '=' * (-len(key['e']) % 4))
+                
+                numbers = RSAPublicNumbers(
+                    e=int.from_bytes(e, 'big'),
+                    n=int.from_bytes(n, 'big')
+                )
+                
+                public_key = numbers.public_key(backend=default_backend()).public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                )
+                
+                # Convert bytes to string
+                public_key = public_key.decode('utf-8')
             
             # TEMPORARY: For debugging, make validation more lenient
             # In production, remove these options and use strict validation

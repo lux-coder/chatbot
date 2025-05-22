@@ -178,3 +178,5 @@ node_modules/
 
 # secrets
 secrets/
+scripts/secrets/
+scripts/nginx/certs/
