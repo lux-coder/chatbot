@@ -81,6 +81,13 @@ else
   echo -e "${YELLOW}Using existing Keycloak client secret${NC}"
 fi
 
+if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_webhook_secret.txt ]; then
+  echo -e "${GREEN}Generating Keycloak webhook secret...${NC}"
+  openssl rand -base64 32 > secrets/keycloak_webhook_secret.txt
+else
+  echo -e "${YELLOW}Using existing Keycloak webhook secret${NC}"
+fi
+
 # Set proper permissions
 echo -e "\n${YELLOW}Setting file permissions...${NC}"
 chmod 600 secrets/*
@@ -94,6 +101,7 @@ export REDIS_PASSWORD=$(cat secrets/redis_password.txt)
 export POSTGRES_PASSWORD=$(cat secrets/postgres_password.txt)
 export KEYCLOAK_ADMIN_PASSWORD=$(cat secrets/keycloak_admin_password.txt)
 export KEYCLOAK_CLIENT_SECRET=$(cat secrets/keycloak_secret.txt)
+export KEYCLOAK_WEBHOOK_SECRET=$(cat secrets/keycloak_webhook_secret.txt)
 
 # Start core services
 echo -e "\n${YELLOW}Starting core services...${NC}"

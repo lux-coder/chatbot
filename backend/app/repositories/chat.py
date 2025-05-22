@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.models.chat import Conversation, Message, Feedback
 from app.repositories.base import TenantRepository
-from app.core.tenancy import get_current_tenant, TenantContextManager
+from app.core.security.tenancy import get_current_tenant, TenantContextManager
 
 
 class ConversationRepository(TenantRepository[Conversation]):

@@ -12,14 +12,19 @@ TORTOISE_ORM: Dict[str, Any] = {
                 "password": "",
                 "port": 5432,
                 "user": "",
-                "pool_size": 20,
-                "max_overflow": 10,
+                "min_size": 10,  # Changed from pool_size
+                "max_size": 20,  # Changed from max_overflow
             },
         }
     },
     "apps": {
         "models": {
-            "models": ["app.models", "aerich.models"],
+            "models": [
+                "app.models.user",
+                "app.models.chat",
+                "app.models.base",
+                "app.models.tenant"  # Add tenant model
+            ],
             "default_connection": "default",
         }
     },
@@ -38,8 +43,8 @@ async def initialize_database() -> None:
         "password": settings.POSTGRES_PASSWORD,
         "port": settings.POSTGRES_PORT,
         "user": settings.POSTGRES_USER,
-        "pool_size": settings.DB_POOL_SIZE,
-        "max_overflow": settings.DB_POOL_MAX_OVERFLOW,
+        "min_size": settings.DB_POOL_SIZE // 2,  # Set min_size to half of pool size
+        "max_size": settings.DB_POOL_SIZE,  # Use pool size as max_size
     })
     
     await Tortoise.init(config=TORTOISE_ORM)

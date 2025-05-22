@@ -2,7 +2,7 @@ from typing import TypeVar, Generic, Type, Optional, List, Any, Dict
 from uuid import UUID
 from tortoise import Model
 from tortoise.expressions import Q
-from app.core.tenancy import get_current_tenant
+from app.core.security.tenancy import get_current_tenant
 from app.models.base import TenantModel
 
 ModelType = TypeVar("ModelType", bound=Model)

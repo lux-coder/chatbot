@@ -93,9 +93,11 @@ class TenantMiddleware(BaseHTTPMiddleware):
             tenant_uuid = UUID(tenant_id)
             await log_security_event(
                 event_type="tenant_request",
-                tenant_id=tenant_uuid,
-                path=str(request.url.path),
-                method=request.method
+                tenant_id=str(tenant_uuid),
+                details={
+                    "path": str(request.url.path),
+                    "method": request.method
+                }
             )
         except ValueError:
             logger.error("Invalid tenant ID format",

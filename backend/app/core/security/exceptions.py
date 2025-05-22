@@ -6,6 +6,7 @@ security-related error handling.
 """
 
 from fastapi import HTTPException, status
+import asyncio
 from ..monitoring import log_security_event
 
 class SecurityException(HTTPException):
@@ -20,13 +21,23 @@ class SecurityException(HTTPException):
             detail: Detailed error message
         """
         super().__init__(status_code=status_code, detail=detail)
-        # Log security event asynchronously
-        # Note: We can't use await here since __init__ can't be async
-        log_security_event(
-            event_type="security_exception",
-            error_type=self.__class__.__name__,
-            error_message=detail,
-            status_code=status_code
+        
+        # Create a new event loop for async logging if one doesn't exist
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        # Log security event
+        loop.create_task(
+            log_security_event(
+                event_type="security_exception",
+                error_type=self.__class__.__name__,
+                error_message=detail,
+                status_code=status_code,
+                severity="ERROR"
+            )
         )
 
 class TenantMismatchError(SecurityException):

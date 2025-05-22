@@ -12,6 +12,10 @@ from app.services.auth import get_current_user, get_current_user_roles, UserToke
 from app.core.security.tenancy import require_tenant
 from app.services.chat import ChatService
 from app.api.deps import get_chat_service
+from app.core.security.exceptions import TenantMismatchError, AIServiceError
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -28,7 +32,7 @@ async def send_message(
     """
     try:
         response = await chat_service.process_message(
-            user_id=user.id,
+            user_id=user.sub,
             tenant_id=tenant_id,
             message=request.message,
             conversation_id=request.conversation_id
@@ -40,10 +44,25 @@ async def send_message(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+    except TenantMismatchError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except AIServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI service error: {str(e)}"
+        )
     except Exception as e:
+        # Log the full error for debugging
+        import traceback
+        logger.error(
+            f"Unhandled error in send_message: {str(type(e).__name__)}, Message: {str(e)}\nTraceback:\n{traceback.format_exc()}"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process message"
+            detail=f"Failed to process message: {str(e)}"
         )
 
 @router.get("/history", response_model=ChatHistoryResponse)
@@ -59,7 +78,7 @@ async def get_chat_history(
     """
     try:
         history = await chat_service.get_chat_history(
-            user_id=user.id,
+            user_id=user.sub,
             tenant_id=tenant_id,
             conversation_id=conversation_id
         )
@@ -89,7 +108,7 @@ async def submit_feedback(
     try:
         feedback = await chat_service.store_feedback(
             message_id=request.message_id,
-            user_id=user.id,
+            user_id=user.sub,
             rating=request.rating,
             comment=request.comment
         )

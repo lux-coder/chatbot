@@ -3,7 +3,7 @@ from uuid import UUID
 from app.models.user import User
 from app.repositories.base import TenantRepository
 from tortoise.expressions import Q
-from app.core.tenancy import get_current_tenant
+from app.core.security.tenancy import get_current_tenant
 
 
 class UserRepository(TenantRepository[User]):
@@ -16,21 +16,25 @@ class UserRepository(TenantRepository[User]):
         self,
         username: str,
         email: str,
-        password: str,
+        password: Optional[str] = None,
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         is_superuser: bool = False,
     ) -> User:
-        """Create a new user with hashed password."""
-        hashed_password = User.hash_password(password)
-        return await self.create(
-            username=username,
-            email=email,
-            hashed_password=hashed_password,
-            first_name=first_name,
-            last_name=last_name,
-            is_superuser=is_superuser,
-        )
+        """Create a new user with optional password."""
+        user_data = {
+            "username": username,
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "is_superuser": is_superuser,
+        }
+        
+        if password:
+            user_data["hashed_password"] = User.hash_password(password)
+            
+        # Let TenantRepository handle tenant_id from context
+        return await self.create(**user_data)
 
     async def get_by_email(self, email: str) -> Optional[User]:
         """Get user by email address."""
@@ -66,6 +70,9 @@ class UserRepository(TenantRepository[User]):
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         email: Optional[str] = None,
+        username: Optional[str] = None,
+        update_last_login: bool = False,
+        is_superuser: Optional[bool] = None,
     ) -> Optional[User]:
         """Update user's profile information."""
         update_data = {}
@@ -75,6 +82,10 @@ class UserRepository(TenantRepository[User]):
             update_data["last_name"] = last_name
         if email is not None:
             update_data["email"] = email
+        if username is not None:
+            update_data["username"] = username
+        if is_superuser is not None:
+            update_data["is_superuser"] = is_superuser
 
         if update_data:
             return await self.update(user_id, **update_data)

@@ -43,6 +43,7 @@ services:
     networks:
       - frontend_net
       - backend_net
+      - db_net
     ports:
       - "8000:8000"
     environment:
@@ -59,6 +60,7 @@ services:
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
       - AI_SERVICE_URL=http://ai_service:8001
+      - KEYCLOAK_WEBHOOK_SECRET=${KEYCLOAK_WEBHOOK_SECRET}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/healthz"]
       interval: 30s
@@ -263,6 +265,7 @@ services:
       - KC_HOSTNAME_URL=http://localhost:8080
       - KC_HOSTNAME_ADMIN_URL=http://localhost:8080
       - JAVA_OPTS_APPEND=-Djgroups.dns.query=keycloak -Dquarkus.transaction-manager.enable-recovery=false
+      - KEYCLOAK_WEBHOOK_SECRET=${KEYCLOAK_WEBHOOK_SECRET}
     volumes:
       - keycloak_data:/opt/keycloak/data
     ports:
@@ -441,12 +444,12 @@ volumes:
 
 secrets:
   postgres_password:
-    file: ./secrets/postgres_password.txt
+    file: ./scripts/secrets/postgres_password.txt
   redis_password:
-    file: ./secrets/redis_password.txt
+    file: ./scripts/secrets/redis_password.txt
   keycloak_secret:
-    file: ./secrets/keycloak_secret.txt
+    file: ./scripts/secrets/keycloak_secret.txt
   keycloak_admin_password:
-    file: ./secrets/keycloak_admin_password.txt
+    file: ./scripts/secrets/keycloak_admin_password.txt
   openai_api_key:
-    file: ./secrets/openai_api_key.txt 
+    file: ./scripts/secrets/openai_api_key.txt 

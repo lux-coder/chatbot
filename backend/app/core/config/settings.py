@@ -13,8 +13,7 @@ class Settings(BaseSettings):
         POSTGRES_PORT: Database port
         POSTGRES_DB: Database name
         SCHEMA_PREFIX: Prefix for tenant schemas
-        DB_POOL_SIZE: Connection pool size
-        DB_POOL_MAX_OVERFLOW: Maximum number of connections that can be created beyond pool size
+        DB_POOL_SIZE: Maximum number of database connections in the pool
         
         # AI Service Settings
         AI_SERVICE_URL: URL of the AI service
@@ -24,6 +23,14 @@ class Settings(BaseSettings):
         AI_MAX_RETRIES: Maximum number of retries for failed requests
         AI_RETRY_DELAY: Delay between retries in seconds
         AI_CACHE_TTL: Cache TTL for AI responses in seconds
+        
+        # Keycloak Settings
+        KEYCLOAK_HOST: Keycloak server hostname
+        KEYCLOAK_PORT: Keycloak server port
+        KEYCLOAK_REALM: Keycloak realm name
+        KEYCLOAK_CLIENT_ID: Client ID for this application
+        KEYCLOAK_CLIENT_SECRET: Client secret for this application
+        KEYCLOAK_WEBHOOK_SECRET: Secret for verifying webhook signatures
     """
     # Database Settings
     POSTGRES_USER: str
@@ -36,8 +43,7 @@ class Settings(BaseSettings):
     SCHEMA_PREFIX: str = "tenant_"
     
     # Connection pool settings
-    DB_POOL_SIZE: int = 20
-    DB_POOL_MAX_OVERFLOW: int = 10
+    DB_POOL_SIZE: int = 20  # Maximum number of connections in the pool
 
     # AI Service Settings
     AI_SERVICE_URL: str = "http://localhost:8001"
@@ -54,10 +60,23 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
     
+    # Keycloak settings
+    KEYCLOAK_HOST: str = "keycloak"
+    KEYCLOAK_PORT: int = 8080
+    KEYCLOAK_REALM: str = "chatbot"
+    KEYCLOAK_CLIENT_ID: str = "chatbot-frontend"
+    KEYCLOAK_CLIENT_SECRET: str = ""
+    KEYCLOAK_WEBHOOK_SECRET: str = ""  # Secret for verifying webhook signatures
+    
     @property
     def postgres_url(self) -> str:
         """Generate the PostgreSQL connection URL."""
         return f"postgres://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
+    @property
+    def keycloak_url(self) -> str:
+        """Generate the Keycloak server URL."""
+        return f"http://{self.KEYCLOAK_HOST}:{self.KEYCLOAK_PORT}/realms/{self.KEYCLOAK_REALM}"
 
     class Config:
         env_file = ".env"

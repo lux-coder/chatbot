@@ -3,9 +3,11 @@ from starlette.middleware import Middleware
 from app.api.v1.chat import router as chat_router
 from app.api.v1.health import router as health_router
 from app.core.security.tenancy import TenantMiddleware
+from app.core.database import initialize_database, close_database_connection
 import logging
 import sys
 from pythonjsonlogger import jsonlogger
+from contextlib import asynccontextmanager
 
 # Enhanced logging configuration
 logger = logging.getLogger()
@@ -22,12 +24,28 @@ logger.setLevel(logging.INFO)
 for handler in logger.handlers[:-1]:
     logger.removeHandler(handler)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown events"""
+    # Startup
+    logger.info("Initializing database...")
+    await initialize_database()
+    logger.info("Database initialized successfully")
+    
+    yield
+    
+    # Shutdown
+    logger.info("Closing database connections...")
+    await close_database_connection()
+    logger.info("Database connections closed")
+
 app = FastAPI(
     title="Secure Chatbot API",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # Register tenant context middleware

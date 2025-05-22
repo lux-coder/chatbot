@@ -11,7 +11,7 @@ class User(TenantModel):
     Attributes:
         username: Unique username for the user
         email: Unique email address
-        hashed_password: Bcrypt hashed password
+        hashed_password: Optional bcrypt hashed password (not used with Keycloak)
         first_name: User's first name
         last_name: User's last name
         is_active: Whether the user account is active
@@ -21,7 +21,7 @@ class User(TenantModel):
     
     username = fields.CharField(max_length=50, unique=True)
     email = fields.CharField(max_length=255, unique=True)
-    hashed_password = fields.CharField(max_length=255)
+    hashed_password = fields.CharField(max_length=255, null=True)
     first_name = fields.CharField(max_length=50, null=True)
     last_name = fields.CharField(max_length=50, null=True)
     is_superuser = fields.BooleanField(default=False)
@@ -53,6 +53,8 @@ class User(TenantModel):
 
     def verify_password(self, password: str) -> bool:
         """Verify if the provided password matches the hashed password."""
+        if not self.hashed_password:
+            return False
         return bcrypt.verify(password, self.hashed_password)
 
     @staticmethod
