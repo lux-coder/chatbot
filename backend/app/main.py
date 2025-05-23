@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from starlette.middleware import Middleware
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.chat import router as chat_router
 from app.api.v1.health import router as health_router
 from app.core.security.tenancy import TenantMiddleware
@@ -51,7 +52,15 @@ app = FastAPI(
 
 # Register tenant context middleware
 app.add_middleware(TenantMiddleware)
-# TODO: Add CORS, security, and other middleware here
+# Allow cross-origin requests from the frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# TODO: Add security and other middleware here
 
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(health_router, prefix="/api/v1")
