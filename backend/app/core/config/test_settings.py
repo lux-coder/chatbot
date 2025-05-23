@@ -54,7 +54,8 @@ class TestSettings(BaseModel):
                     "models": [
                         "app.models.user",
                         "app.models.base",
-                        "app.models.chat"
+                        "app.models.chat",
+                        "app.models.bot",
                     ],
                     "default_connection": "default",
                 }

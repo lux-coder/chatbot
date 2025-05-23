@@ -12,6 +12,7 @@ from app.repositories.chat import ChatRepository
 from app.services.chat import ChatService
 from app.services.ai import AIService
 from app.services.tenant import TenantService
+from app.services.bot import ChatbotInstanceService
 
 async def get_chat_repository() -> AsyncGenerator[ChatRepository, None]:
     """
@@ -58,4 +59,8 @@ async def get_chat_service(
 
 def get_tenant_service() -> TenantService:
     """Dependency for getting a TenantService instance."""
-    return TenantService() 
+    return TenantService()
+
+def get_bot_service() -> ChatbotInstanceService:
+    """Dependency for ChatbotInstanceService."""
+    return ChatbotInstanceService()
