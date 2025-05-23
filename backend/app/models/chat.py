@@ -12,6 +12,7 @@ class Conversation(TenantModel):
     Attributes:
         title: Title of the conversation
         user: User who owns the conversation
+        chatbot_instance: The bot instance this conversation belongs to
         created_at: When the conversation was created
         last_message_at: When the last message was sent
         is_active: Whether the conversation is active
@@ -19,6 +20,11 @@ class Conversation(TenantModel):
     
     title = fields.CharField(max_length=255)
     user = fields.ForeignKeyField('models.User', related_name='conversations')
+    chatbot_instance = fields.ForeignKeyField(
+        'models.ChatbotInstance',
+        related_name='conversations',
+        on_delete=fields.CASCADE
+    )
     last_message_at = fields.DatetimeField(auto_now=True)
 
     class Meta:
@@ -26,7 +32,7 @@ class Conversation(TenantModel):
         ordering = ["-last_message_at"]
 
     def __str__(self) -> str:
-        return f"Conversation(title={self.title}, user={self.user_id})"
+        return f"Conversation(title={self.title}, user={self.user_id}, bot={self.chatbot_instance_id})"
 
     async def get_messages(
         self,

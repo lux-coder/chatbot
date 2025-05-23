@@ -47,6 +47,7 @@ class ChatService:
         self,
         user_id: UUID,
         tenant_id: UUID,
+        chatbot_instance_id: UUID,
         conversation_id: Optional[UUID] = None
     ) -> Conversation:
         """
@@ -55,6 +56,7 @@ class ChatService:
         Args:
             user_id: ID of the user
             tenant_id: ID of the tenant
+            chatbot_instance_id: ID of the bot instance
             conversation_id: Optional ID of existing conversation
             
         Returns:
@@ -85,11 +87,26 @@ class ChatService:
                     raise TenantMismatchError(
                         f"Conversation {conversation_id} does not belong to tenant {tenant_id}"
                     )
+                    
+                # Verify bot instance ownership
+                if conversation.chatbot_instance_id != chatbot_instance_id:
+                    await log_chat_event(
+                        event_type="security_violation",
+                        user_id=user_id,
+                        tenant_id=tenant_id,
+                        conversation_id=conversation_id,
+                        details="Bot instance mismatch in conversation access"
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Conversation {conversation_id} does not belong to bot instance {chatbot_instance_id}"
+                    )
                 return conversation
                 
             return await self.chat_repository.create_conversation(
                 user_id=user_id,
-                tenant_id=tenant_id
+                tenant_id=tenant_id,
+                chatbot_instance_id=chatbot_instance_id
             )
         except Exception as e:
             await log_chat_event(
@@ -134,6 +151,7 @@ class ChatService:
         self,
         user_id: UUID,
         tenant_id: UUID,
+        chatbot_instance_id: UUID,
         message: str,
         conversation_id: Optional[UUID] = None,
         model_type: ModelType = ModelType.OPENAI
@@ -144,6 +162,7 @@ class ChatService:
         Args:
             user_id: ID of the user sending the message
             tenant_id: ID of the tenant
+            chatbot_instance_id: ID of the bot instance
             message: Content of the user's message
             conversation_id: Optional ID of existing conversation
             model_type: Type of AI model to use
@@ -158,7 +177,7 @@ class ChatService:
         try:
             # Get or create conversation
             conversation = await self._get_or_create_conversation(
-                user_id, tenant_id, conversation_id
+                user_id, tenant_id, chatbot_instance_id, conversation_id
             )
             
             # Get conversation context
@@ -306,5 +325,57 @@ class ChatService:
                 message_id=message_id,
                 error_type=str(type(e).__name__),
                 error_message=str(e),
+            )
+            raise
+
+    async def get_bot_conversations(
+        self,
+        user_id: UUID,
+        tenant_id: UUID,
+        chatbot_instance_id: UUID,
+        offset: int = 0,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all conversations for a specific bot instance.
+        
+        Args:
+            user_id: ID of the user
+            tenant_id: ID of the tenant
+            chatbot_instance_id: ID of the bot instance
+            offset: Pagination offset
+            limit: Maximum number of conversations to return
+            
+        Returns:
+            List of conversation details
+        """
+        try:
+            conversations = await self.chat_repository.get_bot_conversations(
+                chatbot_instance_id=chatbot_instance_id,
+                tenant_id=tenant_id,
+                offset=offset,
+                limit=limit
+            )
+            
+            # Filter to ensure user only sees their own conversations
+            user_conversations = [c for c in conversations if c.user_id == user_id]
+            
+            return [
+                {
+                    "conversation_id": conv.id,
+                    "title": conv.title,
+                    "last_message_at": conv.last_message_at,
+                    "chatbot_instance_id": conv.chatbot_instance_id
+                }
+                for conv in user_conversations
+            ]
+        except Exception as e:
+            await log_chat_event(
+                event_type="bot_conversations_error",
+                user_id=user_id,
+                tenant_id=tenant_id,
+                chatbot_instance_id=chatbot_instance_id,
+                error_type=str(type(e).__name__),
+                error_message=str(e)
             )
             raise

@@ -16,11 +16,13 @@ class ConversationRepository(TenantRepository[Conversation]):
     async def create_conversation(
         self,
         user_id: UUID,
+        chatbot_instance_id: UUID,
         title: str
     ) -> Conversation:
         """Create a new conversation."""
         return await self.create(
             user_id=user_id,
+            chatbot_instance_id=chatbot_instance_id,
             title=title
         )
 
@@ -35,6 +37,19 @@ class ConversationRepository(TenantRepository[Conversation]):
             offset=offset,
             limit=limit,
             user_id=user_id
+        )
+
+    async def get_bot_conversations(
+        self,
+        chatbot_instance_id: UUID,
+        offset: int = 0,
+        limit: int = 50
+    ) -> List[Conversation]:
+        """Get conversations for a specific bot instance."""
+        return await self.list(
+            offset=offset,
+            limit=limit,
+            chatbot_instance_id=chatbot_instance_id
         )
 
     async def get_conversation_with_messages(
@@ -53,15 +68,23 @@ class ConversationRepository(TenantRepository[Conversation]):
         self,
         user_id: UUID,
         search_term: str,
+        chatbot_instance_id: Optional[UUID] = None,
         offset: int = 0,
         limit: int = 50
     ) -> List[Conversation]:
         """Search conversations by title."""
+        filters = {
+            "user_id": user_id,
+            "title__icontains": search_term
+        }
+        
+        if chatbot_instance_id:
+            filters["chatbot_instance_id"] = chatbot_instance_id
+            
         return await self.list(
             offset=offset,
             limit=limit,
-            user_id=user_id,
-            title__icontains=search_term
+            **filters
         )
 
 
@@ -164,12 +187,14 @@ class ChatRepository:
         self,
         user_id: UUID,
         tenant_id: UUID,
+        chatbot_instance_id: UUID,
         title: str = "New Conversation",
     ) -> Conversation:
         """Create a new conversation for a tenant."""
         async with TenantContextManager(tenant_id):
             return await self.conversation_repo.create_conversation(
                 user_id=user_id,
+                chatbot_instance_id=chatbot_instance_id,
                 title=title,
             )
 
@@ -221,3 +246,18 @@ class ChatRepository:
     async def close(self) -> None:
         """Placeholder for compatibility with dependency lifecycle."""
         return None
+
+    async def get_bot_conversations(
+        self,
+        chatbot_instance_id: UUID,
+        tenant_id: UUID,
+        offset: int = 0, 
+        limit: int = 50
+    ) -> List[Conversation]:
+        """Get all conversations for a specific bot instance."""
+        async with TenantContextManager(tenant_id):
+            return await self.conversation_repo.get_bot_conversations(
+                chatbot_instance_id=chatbot_instance_id,
+                offset=offset,
+                limit=limit
+            )

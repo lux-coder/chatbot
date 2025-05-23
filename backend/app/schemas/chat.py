@@ -7,6 +7,9 @@ from typing import Annotated, Optional, Dict, Any
 
 class ChatMessageRequest(BaseModel):
     message: Annotated[str, constr(min_length=1, max_length=4096)]
+    chatbot_instance_id: UUID = Field(
+        ..., description="ID of the bot instance this conversation belongs to"
+    )
     conversation_id: Optional[UUID] = Field(
         None, description="If provided, appends to existing conversation; otherwise, starts new."
     )
@@ -15,6 +18,7 @@ class ChatMessageRequest(BaseModel):
 class ChatMessageResponse(BaseModel):
     message_id: UUID
     conversation_id: UUID
+    chatbot_instance_id: UUID
     content: str
     role: str  # 'assistant', 'user', 'system'
     timestamp: datetime
@@ -29,9 +33,20 @@ class ChatHistoryMessage(BaseModel):
 
 class ChatHistoryResponse(BaseModel):
     conversation_id: UUID
+    chatbot_instance_id: UUID
     title: str
     messages: List[ChatHistoryMessage]
     last_message_at: datetime
+
+class BotConversationResponse(BaseModel):
+    conversation_id: UUID
+    chatbot_instance_id: UUID
+    title: str
+    last_message_at: datetime
+    
+class BotConversationsListResponse(BaseModel):
+    conversations: List[BotConversationResponse]
+    total: int
 
 class FeedbackRequest(BaseModel):
     message_id: UUID

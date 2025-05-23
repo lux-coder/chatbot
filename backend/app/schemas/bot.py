@@ -19,5 +19,6 @@ class ChatbotInstanceResponse(ChatbotInstanceBase):
     published_at: Optional[datetime] = None
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

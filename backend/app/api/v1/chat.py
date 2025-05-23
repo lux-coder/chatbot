@@ -8,6 +8,7 @@ from app.schemas import (
     FeedbackRequest,
     FeedbackResponse,
 )
+from app.schemas.chat import BotConversationsListResponse, BotConversationResponse
 from app.services.auth import get_current_user, get_current_user_roles, UserToken, AuthService
 from app.core.security.tenancy import require_tenant
 from app.services.chat import ChatService
@@ -44,9 +45,13 @@ async def send_message(
         response = await chat_service.process_message(
             user_id=UUID(user.sub),  # Use Keycloak ID directly
             tenant_id=tenant_id,
+            chatbot_instance_id=request.chatbot_instance_id,
             message=request.message,
             conversation_id=request.conversation_id
         )
+        
+        # Add the chatbot_instance_id to the response
+        response["chatbot_instance_id"] = request.chatbot_instance_id
         
         return ChatMessageResponse(**response)
     except ValueError as e:
@@ -73,6 +78,53 @@ async def send_message(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process message: {str(e)}"
+        )
+
+@router.get("/bot/{chatbot_instance_id}/conversations", response_model=BotConversationsListResponse)
+async def get_bot_conversations(
+    chatbot_instance_id: UUID,
+    offset: int = 0,
+    limit: int = 50,
+    user: UserToken = Depends(get_current_user),
+    tenant_id: UUID = Depends(require_tenant),
+    chat_service: ChatService = Depends(get_chat_service),
+):
+    """
+    List all conversations for a specific bot instance.
+    """
+    try:
+        # Create AuthService to ensure user exists in database
+        auth_service = AuthService()
+        db_user = await auth_service.sync_user_from_keycloak(user, tenant_id)
+        
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to synchronize user data"
+            )
+            
+        conversations = await chat_service.get_bot_conversations(
+            user_id=UUID(user.sub),
+            tenant_id=tenant_id,
+            chatbot_instance_id=chatbot_instance_id,
+            offset=offset,
+            limit=limit
+        )
+        
+        # Convert to response model format
+        conversation_responses = [
+            BotConversationResponse(**conv) for conv in conversations
+        ]
+        
+        return BotConversationsListResponse(
+            conversations=conversation_responses,
+            total=len(conversation_responses)  # In a real implementation, would get actual total count
+        )
+    except Exception as e:
+        logger.error(f"Error getting bot conversations: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve conversations: {str(e)}"
         )
 
 @router.get("/history", response_model=ChatHistoryResponse)
@@ -102,6 +154,18 @@ async def get_chat_history(
             tenant_id=tenant_id,
             conversation_id=conversation_id
         )
+        
+        # Get the conversation to include its chatbot_instance_id
+        conversation = await chat_service.chat_repository.get_conversation(conversation_id)
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found"
+            )
+            
+        # Add chatbot_instance_id to the response
+        history["chatbot_instance_id"] = conversation.chatbot_instance_id
+        
         return ChatHistoryResponse(**history)
     except ValueError as e:
         raise HTTPException(
