@@ -188,3 +188,9 @@ async def chat_repository():
     """Create a chat repository instance."""
     from app.repositories.chat import ChatRepository
     return ChatRepository()
+
+@pytest_asyncio.fixture
+async def bot_repository():
+    """Create a ChatbotInstance repository instance."""
+    from app.repositories.bot import ChatbotInstanceRepository
+    return ChatbotInstanceRepository()

@@ -23,7 +23,8 @@ TORTOISE_ORM: Dict[str, Any] = {
                 "app.models.user",
                 "app.models.chat",
                 "app.models.base",
-                "app.models.tenant"  # Add tenant model
+                "app.models.tenant",  # Add tenant model
+                "app.models.bot",
             ],
             "default_connection": "default",
         }
