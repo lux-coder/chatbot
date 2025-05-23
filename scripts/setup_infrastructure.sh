@@ -225,12 +225,27 @@ docker compose up -d --build backend
 echo -e "\n${YELLOW}Building and starting AI service...${NC}"
 docker compose up -d --build ai_service
 
-# Optionally start frontend if Dockerfile exists
-if [ -f "frontend/Dockerfile" ]; then
-  echo -e "\n${YELLOW}Building and starting frontend service...${NC}"
-  docker compose up -d --build frontend
+# Start frontend service
+echo -e "\n${YELLOW}Building and starting frontend service...${NC}"
+docker compose up -d --build frontend
+
+# Wait for frontend to be healthy
+echo -e "\n${YELLOW}Waiting for frontend to be healthy...${NC}"
+FRONTEND_HEALTHY=0
+for i in {1..12}; do
+    if curl -s -f http://localhost:3000 > /dev/null; then
+        FRONTEND_HEALTHY=1
+        break
+    fi
+    echo -e "${YELLOW}Waiting for frontend to become healthy... (${i}/12)${NC}"
+    sleep 5
+done
+if [ $FRONTEND_HEALTHY -eq 1 ]; then
+    echo -e "${GREEN}Frontend is responding correctly${NC}"
 else
-  echo -e "\n${YELLOW}Skipping frontend: frontend/Dockerfile not found. Implement frontend before enabling this service.${NC}"
+    echo -e "${RED}Frontend health check failed${NC}"
+    docker compose logs frontend
+    exit 1
 fi
 
 # Wait for backend to be healthy
@@ -272,8 +287,12 @@ fi
 echo -e "\n${GREEN}Infrastructure setup completed successfully!${NC}"
 echo -e "\n${YELLOW}All services are running:${NC}"
 echo -e "- Core services (PostgreSQL, Redis, Keycloak)"
+echo -e "- Application services (Backend, AI Service, Frontend)"
 echo -e "- Monitoring (Redis Exporter, Postgres Exporter, Nginx Exporter, Prometheus, Grafana, Loki, Promtail)"
 echo -e "\n${YELLOW}You can access:${NC}"
+echo -e "- Frontend application at http://localhost:3000"
+echo -e "- Backend API at http://localhost:8000/api/v1"
+echo -e "- Keycloak admin at http://localhost:8080/admin"
 echo -e "- Grafana at http://localhost:3001 (default credentials: admin/admin)"
 echo -e "- Prometheus at http://localhost:9090"
 echo -e "- Redis Exporter metrics at http://localhost:9121/metrics"
