@@ -121,6 +121,7 @@ services:
       dockerfile: Dockerfile
     networks:
       - backend_net
+      - db_net
     ports:
       - "8001:8001"
     environment:
@@ -208,6 +209,7 @@ services:
       dockerfile: Dockerfile
     networks:
       - db_net
+      - backend_net
     command: >
       redis-server
       --requirepass ${REDIS_PASSWORD:-redis}

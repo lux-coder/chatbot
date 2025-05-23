@@ -7,10 +7,10 @@ integrated PII protection.
 
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel, Field
-from ..models.openai import OpenAIModel
-from ..models.llama import LlamaModel
-from ..security.pii_handler import PIIHandler
+from pydantic import BaseModel, Field, ValidationError
+from models.openai import OpenAIModel
+from models.llama import LlamaModel
+from security.pii_handler import PIIHandler
 import logging
 from fastapi.responses import JSONResponse
 
@@ -31,7 +31,11 @@ class GenerationResponse(BaseModel):
     model_used: str = Field(..., description="Model that generated the response")
     tokens_used: int = Field(..., description="Number of tokens used")
 
-async def get_model(model_type: str):
+async def get_pii_handler():
+    """Get PII handler with dependency injection"""
+    return PIIHandler()
+
+def get_model_instance(model_type: str):
     """Get the appropriate model based on type"""
     if model_type == "openai":
         return OpenAIModel()
@@ -39,14 +43,9 @@ async def get_model(model_type: str):
         return LlamaModel()
     raise HTTPException(status_code=400, detail=f"Unsupported model type: {model_type}")
 
-async def get_pii_handler():
-    """Get PII handler with dependency injection"""
-    return PIIHandler()
-
 @router.post("/generate", response_model=GenerationResponse)
 async def generate_text(
     request: GenerationRequest,
-    model=Depends(get_model),
     pii_handler=Depends(get_pii_handler)
 ):
     """
@@ -59,7 +58,6 @@ async def generate_text(
     
     Args:
         request: The generation request containing message, context, and model preferences
-        model: The AI model instance (injected based on request.model_type)
         pii_handler: The PII detection and masking handler
         
     Returns:
@@ -69,6 +67,7 @@ async def generate_text(
         HTTPException: If model generation fails or parameters are invalid
     """
     try:
+        logger.info(f"Received request: {request.dict()}")
         # Log the request (without PII)
         logger.info(
             f"Generation request received",
@@ -79,6 +78,9 @@ async def generate_text(
                 "temperature": request.temperature
             }
         )
+        
+        # Get the appropriate model
+        model = get_model_instance(request.model_type)
         
         # Process PII in the message
         masked_message = await pii_handler.process_text(request.message)
@@ -109,21 +111,9 @@ async def generate_text(
         
         return response
         
-    except ValueError as e:
-        # Handle validation errors
-        logger.error(f"Validation error in generation request: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
-        
+    except ValidationError as e:
+        logger.error(f"Validation error: {e.errors()}")
+        raise
     except Exception as e:
-        # Handle all other errors
         logger.error(f"Error in generation request: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error during text generation")
-
-@router.exception_handler(Exception)
-async def generic_exception_handler(request: Request, exc: Exception):
-    """Generic exception handler for the generation API"""
-    logger.error(f"Unhandled exception: {str(exc)}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An unexpected error occurred during text generation"}
-    ) 

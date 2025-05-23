@@ -38,7 +38,7 @@ echo -e "${YELLOW}Starting infrastructure setup...${NC}"
 
 # Create necessary directories
 echo -e "\n${YELLOW}Creating directories...${NC}"
-mkdir -p secrets
+mkdir -p scripts/secrets
 mkdir -p nginx/certs
 mkdir -p docker/services/postgres/init
 mkdir -p monitoring/prometheus
@@ -52,56 +52,57 @@ mkdir -p monitoring/promtail
 # Generate secrets
 echo -e "\n${YELLOW}Generating secrets...${NC}"
 
-if $COMPLETE_TEARDOWN || [ ! -f secrets/postgres_password.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/postgres_password.txt ]; then
   echo -e "${GREEN}Generating PostgreSQL password...${NC}"
-  openssl rand -base64 32 > secrets/postgres_password.txt
+  openssl rand -base64 32 > scripts/secrets/postgres_password.txt
 else
   echo -e "${YELLOW}Using existing PostgreSQL password${NC}"
 fi
 
-if $COMPLETE_TEARDOWN || [ ! -f secrets/redis_password.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/redis_password.txt ]; then
   echo -e "${GREEN}Generating Redis password...${NC}"
-  openssl rand -base64 32 > secrets/redis_password.txt
+  openssl rand -base64 32 > scripts/secrets/redis_password.txt
 else
   echo -e "${YELLOW}Using existing Redis password${NC}"
 fi
 
 # Ensure admin password is not base64 for Keycloak direct use
-if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_admin_password.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/keycloak_admin_password.txt ]; then
   echo -e "${GREEN}Generating Keycloak admin password (plain text)...${NC}"
-  openssl rand -hex 16 > secrets/keycloak_admin_password.txt
+  openssl rand -hex 16 > scripts/secrets/keycloak_admin_password.txt
 else
   echo -e "${YELLOW}Using existing Keycloak admin password${NC}"
 fi
 
-if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_secret.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/keycloak_secret.txt ]; then
   echo -e "${GREEN}Generating Keycloak client secret...${NC}"
-  openssl rand -base64 32 > secrets/keycloak_secret.txt
+  openssl rand -base64 32 > scripts/secrets/keycloak_secret.txt
 else
   echo -e "${YELLOW}Using existing Keycloak client secret${NC}"
 fi
 
-if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_webhook_secret.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/keycloak_webhook_secret.txt ]; then
   echo -e "${GREEN}Generating Keycloak webhook secret...${NC}"
-  openssl rand -base64 32 > secrets/keycloak_webhook_secret.txt
+  openssl rand -base64 32 > scripts/secrets/keycloak_webhook_secret.txt
 else
   echo -e "${YELLOW}Using existing Keycloak webhook secret${NC}"
 fi
 
 # Set proper permissions
 echo -e "\n${YELLOW}Setting file permissions...${NC}"
-chmod 600 secrets/*
+chmod 600 scripts/secrets/*
 
 # Generate SSL certificates
 echo -e "\n${YELLOW}Generating SSL certificates...${NC}"
 ./generate_ssl_certs.sh # Assuming this script is in the same directory (scripts/)
 
 # Export passwords for docker-compose
-export REDIS_PASSWORD=$(cat secrets/redis_password.txt)
-export POSTGRES_PASSWORD=$(cat secrets/postgres_password.txt)
-export KEYCLOAK_ADMIN_PASSWORD=$(cat secrets/keycloak_admin_password.txt)
-export KEYCLOAK_CLIENT_SECRET=$(cat secrets/keycloak_secret.txt)
-export KEYCLOAK_WEBHOOK_SECRET=$(cat secrets/keycloak_webhook_secret.txt)
+export REDIS_PASSWORD=$(cat scripts/secrets/redis_password.txt)
+export POSTGRES_PASSWORD=$(cat scripts/secrets/postgres_password.txt)
+export KEYCLOAK_ADMIN_PASSWORD=$(cat scripts/secrets/keycloak_admin_password.txt)
+export KEYCLOAK_CLIENT_SECRET=$(cat scripts/secrets/keycloak_secret.txt)
+export KEYCLOAK_WEBHOOK_SECRET=$(cat scripts/secrets/keycloak_webhook_secret.txt)
+export OPENAI_API_KEY=$(cat scripts/secrets/openai_api_key.txt)
 
 # Start core services
 echo -e "\n${YELLOW}Starting core services...${NC}"
@@ -220,6 +221,10 @@ fi
 echo -e "\n${YELLOW}Building and starting backend service...${NC}"
 docker compose up -d --build backend
 
+# Start AI service
+echo -e "\n${YELLOW}Building and starting AI service...${NC}"
+docker compose up -d --build ai_service
+
 # Optionally start frontend if Dockerfile exists
 if [ -f "frontend/Dockerfile" ]; then
   echo -e "\n${YELLOW}Building and starting frontend service...${NC}"
@@ -243,6 +248,24 @@ if [ $BACKEND_HEALTHY -eq 1 ]; then
 else
     echo -e "${RED}Backend health check failed${NC}"
     docker compose logs backend
+    exit 1
+fi
+
+# Wait for AI service to be healthy
+AI_SERVICE_HEALTHY=0
+for i in {1..10}; do
+    if curl -s -f http://localhost:8001/healthz > /dev/null; then
+        AI_SERVICE_HEALTHY=1
+        break
+    fi
+    echo -e "${YELLOW}Waiting for AI service to become healthy... (${i}/10)${NC}"
+    sleep 5
+done
+if [ $AI_SERVICE_HEALTHY -eq 1 ]; then
+    echo -e "${GREEN}AI service is responding correctly${NC}"
+else
+    echo -e "${RED}AI service health check failed${NC}"
+    docker compose logs ai_service
     exit 1
 fi
 

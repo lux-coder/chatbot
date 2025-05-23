@@ -8,7 +8,7 @@ preserving the context and readability of the content.
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 import hashlib
-from .pii_detector import PIIMatch
+from security.pii_detector import PIIMatch
 
 @dataclass
 class MaskingConfig:

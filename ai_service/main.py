@@ -8,9 +8,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from contextlib import asynccontextmanager
-from .api import generate, health
-from .middleware.rate_limiter import RateLimitMiddleware
-from .core.settings import get_settings
+from api import generate, health
+from middleware.rate_limiter import RateLimitMiddleware
+from security.exceptions import generic_exception_handler
+from core.settings import get_settings
 import logging
 
 # Configure logging
@@ -55,6 +56,9 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(generate.router, prefix="/api/v1", tags=["generation"])
     app.include_router(health.router, tags=["health"])
+    
+    # Add exception handlers
+    app.add_exception_handler(Exception, generic_exception_handler)
     
     return app
 

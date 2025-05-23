@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # Database Settings
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
-    POSTGRES_HOST: str = "localhost"
+    POSTGRES_HOST: str = "postgres"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str
     
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 20  # Maximum number of connections in the pool
 
     # AI Service Settings
-    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_URL: str = "http://ai_service:8001"
     AI_FALLBACK_ENABLED: bool = True
     AI_DEFAULT_MODEL: str = "openai"
     AI_TIMEOUT_SECONDS: float = 30.0
@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     AI_CACHE_TTL: int = 86400  # 24 hours in seconds
     
     # Redis settings
-    REDIS_URL: str = "redis://localhost:6379/0"
-    REDIS_HOST: str = "localhost"
+    REDIS_URL: str = "redis://redis:6379/0"
+    REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
     

@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     LLAMA_MODEL_PATH: str = "llama.cpp"
     
     # Redis (for rate limiting and caching)
-    REDIS_URL: str = "redis://localhost:6379/1"
-    REDIS_HOST: str = "localhost"
+    REDIS_URL: str = "redis://redis:6379/1"
+    REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
     

@@ -2,9 +2,11 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field, constr
+from typing import Annotated, Optional, Dict, Any
+
 
 class ChatMessageRequest(BaseModel):
-    message: constr(min_length=1, max_length=4096)
+    message: Annotated[str, constr(min_length=1, max_length=4096)]
     conversation_id: Optional[UUID] = Field(
         None, description="If provided, appends to existing conversation; otherwise, starts new."
     )

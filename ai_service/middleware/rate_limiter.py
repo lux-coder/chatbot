@@ -7,7 +7,7 @@ This module provides rate limiting functionality using Redis.
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 import redis.asyncio as redis
-from ..core.settings import get_settings
+from core.settings import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,20 +30,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         """Process each request through rate limiting"""
         
-        # Skip rate limiting for health check
-        if request.url.path == "/healthz":
+        # Skip rate limiting for health check and docs
+        if request.url.path in ["/healthz", "/docs", "/redoc", "/openapi.json"]:
             return await call_next(request)
         
-        # Get client identifier (IP address or API key)
-        client_id = self._get_client_id(request)
-        
-        # Check rate limit
-        if not await self._check_rate_limit(client_id):
-            logger.warning(f"Rate limit exceeded for client: {client_id}")
-            raise HTTPException(
-                status_code=429,
-                detail="Too many requests. Please try again later."
-            )
+        try:
+            # Get client identifier (IP address or API key)
+            client_id = self._get_client_id(request)
+            
+            # Check rate limit
+            if not await self._check_rate_limit(client_id):
+                logger.warning(f"Rate limit exceeded for client: {client_id}")
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many requests. Please try again later."
+                )
+        except Exception as e:
+            # Log error but don't block requests if Redis is unavailable
+            logger.error(f"Rate limiter error: {str(e)}")
         
         # Process the request
         response = await call_next(request)

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 import redis.asyncio as redis
 from app.core.config import Settings
 from app.core.monitoring import log_chat_event
+import logging
 
 class ModelType(str, Enum):
     """Supported AI model types"""
@@ -254,16 +255,18 @@ class AIService:
         """
         request = AIRequest(
             message=message,
-            context=context,
-            model_type=model_type
+            context=context if context is not None else [],  # Ensure list
+            model_type=model_type.value  # Convert enum to string
         )
-        
+        # Debug log outgoing payload
+        logging.getLogger(__name__).info(f"Sending to AI service: {request.model_dump()}")
         response = await self.client.post(
-            "/generate",
+            "/api/v1/generate",
             json=request.model_dump()
         )
+        if response.status_code != 200:
+            logging.getLogger(__name__).error(f"AI service error response: {response.text}")
         response.raise_for_status()
-        
         return AIResponse(**response.json())
 
 class AIServiceError(Exception):
