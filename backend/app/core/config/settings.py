@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 from functools import lru_cache
-
+from urllib.parse import quote
 
 class Settings(BaseSettings):
     """Application configuration settings.
@@ -81,7 +81,8 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         """Generate the Redis connection URL."""
-        return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        encoded_password = quote(self.REDIS_PASSWORD, safe='')
+        return f"redis://:{encoded_password}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
 
     class Config:
         env_file = ".env"
