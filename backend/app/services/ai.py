@@ -60,7 +60,7 @@ class AIService:
         
         # Initialize Redis connection
         self.redis = redis.from_url(
-            settings.REDIS_URL,
+            settings.redis_url,
             encoding="utf-8",
             decode_responses=True
         )

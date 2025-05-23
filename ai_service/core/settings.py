@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/1"
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
-    REDIS_PASSWORD: Optional[str] = None
+    REDIS_PASSWORD: str
     
     # Service settings
     HOST: str = "0.0.0.0"
@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # Rate limiting
     RATE_LIMIT_CALLS: int = 60
     RATE_LIMIT_WINDOW: int = 60
+
+        
+    @property
+    def redis_url(self) -> str:
+        """Generate the Redis connection URL."""
+        return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
     
     class Config:
         env_file = ".env"

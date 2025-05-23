@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/0"
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
-    REDIS_PASSWORD: Optional[str] = None
+    REDIS_PASSWORD: str
     
     # Keycloak settings
     KEYCLOAK_HOST: str = "keycloak"
@@ -77,6 +77,11 @@ class Settings(BaseSettings):
     def keycloak_url(self) -> str:
         """Generate the Keycloak server URL."""
         return f"http://{self.KEYCLOAK_HOST}:{self.KEYCLOAK_PORT}/realms/{self.KEYCLOAK_REALM}"
+    
+    @property
+    def redis_url(self) -> str:
+        """Generate the Redis connection URL."""
+        return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
 
     class Config:
         env_file = ".env"
