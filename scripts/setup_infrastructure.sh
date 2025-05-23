@@ -52,57 +52,57 @@ mkdir -p monitoring/promtail
 # Generate secrets
 echo -e "\n${YELLOW}Generating secrets...${NC}"
 
-if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/postgres_password.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f secrets/postgres_password.txt ]; then
   echo -e "${GREEN}Generating PostgreSQL password...${NC}"
-  openssl rand -base64 32 > scripts/secrets/postgres_password.txt
+  openssl rand -base64 32 > secrets/postgres_password.txt
 else
   echo -e "${YELLOW}Using existing PostgreSQL password${NC}"
 fi
 
-if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/redis_password.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f secrets/redis_password.txt ]; then
   echo -e "${GREEN}Generating Redis password...${NC}"
-  openssl rand -base64 32 > scripts/secrets/redis_password.txt
+  openssl rand -base64 32 > secrets/redis_password.txt
 else
   echo -e "${YELLOW}Using existing Redis password${NC}"
 fi
 
 # Ensure admin password is not base64 for Keycloak direct use
-if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/keycloak_admin_password.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_admin_password.txt ]; then
   echo -e "${GREEN}Generating Keycloak admin password (plain text)...${NC}"
-  openssl rand -hex 16 > scripts/secrets/keycloak_admin_password.txt
+  openssl rand -hex 16 > secrets/keycloak_admin_password.txt
 else
   echo -e "${YELLOW}Using existing Keycloak admin password${NC}"
 fi
 
-if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/keycloak_secret.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_secret.txt ]; then
   echo -e "${GREEN}Generating Keycloak client secret...${NC}"
-  openssl rand -base64 32 > scripts/secrets/keycloak_secret.txt
+  openssl rand -base64 32 > secrets/keycloak_secret.txt
 else
   echo -e "${YELLOW}Using existing Keycloak client secret${NC}"
 fi
 
-if $COMPLETE_TEARDOWN || [ ! -f scripts/secrets/keycloak_webhook_secret.txt ]; then
+if $COMPLETE_TEARDOWN || [ ! -f secrets/keycloak_webhook_secret.txt ]; then
   echo -e "${GREEN}Generating Keycloak webhook secret...${NC}"
-  openssl rand -base64 32 > scripts/secrets/keycloak_webhook_secret.txt
+  openssl rand -base64 32 > secrets/keycloak_webhook_secret.txt
 else
   echo -e "${YELLOW}Using existing Keycloak webhook secret${NC}"
 fi
 
 # Set proper permissions
 echo -e "\n${YELLOW}Setting file permissions...${NC}"
-chmod 600 scripts/secrets/*
+chmod 600 secrets/*
 
 # Generate SSL certificates
 echo -e "\n${YELLOW}Generating SSL certificates...${NC}"
 ./generate_ssl_certs.sh # Assuming this script is in the same directory (scripts/)
 
 # Export passwords for docker-compose
-export REDIS_PASSWORD=$(cat scripts/secrets/redis_password.txt)
-export POSTGRES_PASSWORD=$(cat scripts/secrets/postgres_password.txt)
-export KEYCLOAK_ADMIN_PASSWORD=$(cat scripts/secrets/keycloak_admin_password.txt)
-export KEYCLOAK_CLIENT_SECRET=$(cat scripts/secrets/keycloak_secret.txt)
-export KEYCLOAK_WEBHOOK_SECRET=$(cat scripts/secrets/keycloak_webhook_secret.txt)
-export OPENAI_API_KEY=$(cat scripts/secrets/openai_api_key.txt)
+export REDIS_PASSWORD=$(cat secrets/redis_password.txt)
+export POSTGRES_PASSWORD=$(cat secrets/postgres_password.txt)
+export KEYCLOAK_ADMIN_PASSWORD=$(cat secrets/keycloak_admin_password.txt)
+export KEYCLOAK_CLIENT_SECRET=$(cat secrets/keycloak_secret.txt)
+export KEYCLOAK_WEBHOOK_SECRET=$(cat secrets/keycloak_webhook_secret.txt)
+export OPENAI_API_KEY=$(cat secrets/openai_api_key.txt)
 
 # Start core services
 echo -e "\n${YELLOW}Starting core services...${NC}"
