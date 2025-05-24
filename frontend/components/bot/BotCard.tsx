@@ -6,21 +6,11 @@ import { clsx } from 'clsx';
 import { Button } from '@/components/common';
 import { useDeleteBot, usePublishBot } from '@/hooks/useBots';
 import type { ComponentProps } from '@/utils/types';
-
-interface Bot {
-  id: string;
-  name: string;
-  style: string;
-  language: string;
-  icon?: string;
-  is_published: boolean;
-  published_at?: string;
-  created_at: string;
-}
+import type { ChatbotInstanceResponse } from '@/api/bot';
 
 interface BotCardProps extends ComponentProps {
-  bot: Bot;
-  onEdit?: (bot: Bot) => void;
+  bot: ChatbotInstanceResponse;
+  onEdit?: (bot: ChatbotInstanceResponse) => void;
   onDelete?: (botId: string) => void;
   onChat?: (botId: string) => void;
 }

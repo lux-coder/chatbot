@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { AuthGuard } from '@/components/auth';
+import { LoginButton } from '@/components/auth';
 import { useAuth } from '@/hooks/useAuth';
 
 const HomePage: React.FC = () => {
@@ -70,28 +70,15 @@ const HomePage: React.FC = () => {
                 </div>
                 <span className="text-xl font-bold text-secondary-900">Secure Chatbot</span>
               </div>
-              <AuthGuard 
-                fallback={
-                  <div className="flex items-center space-x-4">
-                    <button className="text-secondary-600 hover:text-secondary-900 font-medium">
-                      Features
-                    </button>
-                    <button className="text-secondary-600 hover:text-secondary-900 font-medium">
-                      About
-                    </button>
-                    <button className="btn btn-primary">
-                      Sign In
-                    </button>
-                  </div>
-                }
-              >
-                <button 
-                  onClick={() => router.push('/dashboard')}
-                  className="btn btn-primary"
-                >
-                  Go to Dashboard
+              <div className="flex items-center space-x-4">
+                <button className="text-secondary-600 hover:text-secondary-900 font-medium">
+                  Features
                 </button>
-              </AuthGuard>
+                <button className="text-secondary-600 hover:text-secondary-900 font-medium">
+                  About
+                </button>
+                <LoginButton />
+              </div>
             </div>
           </div>
         </header>
@@ -110,20 +97,11 @@ const HomePage: React.FC = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <AuthGuard
-                fallback={
-                  <button className="btn btn-primary btn-lg">
-                    Get Started
-                  </button>
-                }
-              >
-                <button 
-                  onClick={() => router.push('/dashboard')}
-                  className="btn btn-primary btn-lg"
-                >
-                  Go to Dashboard
-                </button>
-              </AuthGuard>
+              <LoginButton 
+                variant="primary" 
+                size="lg"
+                loginText="Get Started"
+              />
               <button className="btn btn-secondary btn-lg">
                 Learn More
               </button>

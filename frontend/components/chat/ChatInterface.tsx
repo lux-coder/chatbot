@@ -38,7 +38,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     startNewConversation,
     sendMessage,
     conversations,
-    chatHistory,
+    history,
     isLoadingHistory,
   } = useChatManager(selectedBotId || '');
 
@@ -51,7 +51,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [chatHistory?.messages]);
+  }, [history?.messages]);
 
   // Handle bot selection
   const handleBotSelect = (botId: string) => {
@@ -277,10 +277,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="flex items-center justify-center h-full">
                 <Loading size="lg" text="Loading conversation..." />
               </div>
-            ) : chatHistory && chatHistory.messages.length > 0 ? (
+            ) : history && history.messages.length > 0 ? (
               <>
                 <MessageList
-                  messages={chatHistory.messages}
+                  messages={history.messages}
                   isLoading={sendMessage.isLoading}
                 />
                 <div ref={messagesEndRef} />

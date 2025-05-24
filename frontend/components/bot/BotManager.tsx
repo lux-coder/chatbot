@@ -8,20 +8,10 @@ import { BotCard } from './BotCard';
 import { useBots } from '@/hooks/useBots';
 import { useAuth } from '@/hooks/useAuth';
 import type { ComponentProps } from '@/utils/types';
-
-interface Bot {
-  id: string;
-  name: string;
-  style: string;
-  language: string;
-  icon?: string;
-  is_published: boolean;
-  published_at?: string;
-  created_at: string;
-}
+import type { ChatbotInstanceResponse } from '@/api/bot';
 
 interface BotManagerProps extends ComponentProps {
-  onEditBot?: (bot: Bot) => void;
+  onEditBot?: (bot: ChatbotInstanceResponse) => void;
 }
 
 export const BotManager: React.FC<BotManagerProps> = ({
