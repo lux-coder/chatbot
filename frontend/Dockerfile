@@ -41,7 +41,9 @@ RUN adduser --system --uid 1001 nextjs
 
 # Install production dependencies only for runtime
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+#RUN npm ci --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
+
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public

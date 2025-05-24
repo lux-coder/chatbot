@@ -135,7 +135,7 @@ fi
 echo -e "\n${YELLOW}Waiting for Keycloak to become ready...${NC}"
 KEYCLOAK_READY=0
 for i in {1..24}; do
-    if curl -s -f http://localhost:8080/health/ready > /dev/null; then
+    if curl -s -f http://localhost:9000/health/ready > /dev/null; then
         KEYCLOAK_READY=1
         break
     fi
