@@ -1,0 +1,59 @@
+{
+  "regex_filters": [
+    {
+      "name": "sql_injection",
+      "pattern": "(?i)(union\\s+select|drop\\s+table|delete\\s+from|insert\\s+into|update\\s+set|create\\s+table|alter\\s+table|exec\\s*\\(|execute\\s*\\(|sp_|xp_|cmdshell)",
+      "action": "block",
+      "message": "🚫 Your input contains potentially harmful SQL commands and has been blocked."
+    },
+    {
+      "name": "script_injection",
+      "pattern": "(?i)(<script[^>]*>.*?</script>|javascript:|on\\w+\\s*=|eval\\s*\\(|setTimeout\\s*\\(|setInterval\\s*\\()",
+      "action": "block",
+      "message": "🚫 Your input contains potentially harmful script content and has been blocked."
+    },
+    {
+      "name": "profanity_basic",
+      "pattern": "(?i)\\b(fuck|shit|damn|bitch|asshole|bastard|crap|piss)\\b",
+      "action": "sanitize",
+      "replacement": "***",
+      "message": "⚠️ Your message contained inappropriate language that has been filtered."
+    },
+    {
+      "name": "hate_speech",
+      "pattern": "(?i)\\b(nazi|hitler|terrorist|kill\\s+yourself|kys|die\\s+in\\s+a\\s+fire)\\b",
+      "action": "block",
+      "message": "🚫 Your input contains hate speech and has been blocked."
+    },
+    {
+      "name": "personal_info_patterns",
+      "pattern": "(?i)(ssn|social\\s+security|credit\\s+card|password|api\\s+key|secret|token)\\s*[:=]\\s*[\\w\\-]+",
+      "action": "block",
+      "message": "🚫 Your input appears to contain sensitive personal information and has been blocked for security."
+    },
+    {
+      "name": "excessive_profanity",
+      "pattern": "(?i)\\b(motherfucker|cocksucker|dickhead|shithead|douchebag)\\b",
+      "action": "block",
+      "message": "🚫 Your input contains excessive profanity and has been blocked."
+    },
+    {
+      "name": "spam_patterns",
+      "pattern": "(?i)(buy\\s+now|click\\s+here|limited\\s+time|act\\s+fast|make\\s+money|work\\s+from\\s+home).{0,50}(http|www|\\$\\d+)",
+      "action": "block",
+      "message": "🚫 Your input appears to be spam and has been blocked."
+    },
+    {
+      "name": "prompt_injection",
+      "pattern": "(?i)(ignore\\s+previous\\s+instructions|system\\s+prompt|you\\s+are\\s+now|pretend\\s+to\\s+be|act\\s+as\\s+if|forget\\s+everything|new\\s+instructions)",
+      "action": "block",
+      "message": "🚫 Your input contains prompt manipulation attempts and has been blocked."
+    }
+  ],
+  "settings": {
+    "case_sensitive": false,
+    "allow_partial_matches": true,
+    "max_message_length": 4096,
+    "enable_logging": true
+  }
+} 

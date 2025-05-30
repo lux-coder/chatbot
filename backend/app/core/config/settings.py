@@ -24,6 +24,16 @@ class Settings(BaseSettings):
         AI_RETRY_DELAY: Delay between retries in seconds
         AI_CACHE_TTL: Cache TTL for AI responses in seconds
         
+        # OpenAI Moderation API Settings
+        OPENAI_API_KEY: OpenAI API key for moderation endpoint
+        OPENAI_MODERATION_ENABLED: Whether to enable OpenAI moderation
+        OPENAI_MODERATION_TIMEOUT: Timeout for moderation API calls
+        
+        # Prompt Filtering Settings
+        PROMPT_FILTER_ENABLED: Whether to enable prompt filtering
+        PROMPT_FILTER_CONFIG_PATH: Path to the prompt filter configuration file
+        PROMPT_FILTER_STRICT_MODE: Block on any moderation API error
+        
         # Keycloak Settings
         KEYCLOAK_HOST: Keycloak server hostname
         KEYCLOAK_PORT: Keycloak server port
@@ -53,6 +63,16 @@ class Settings(BaseSettings):
     AI_MAX_RETRIES: int = 3
     AI_RETRY_DELAY: float = 1.0
     AI_CACHE_TTL: int = 86400  # 24 hours in seconds
+    
+    # OpenAI Moderation API Settings
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODERATION_ENABLED: bool = True
+    OPENAI_MODERATION_TIMEOUT: float = 10.0
+    
+    # Prompt Filtering Settings
+    PROMPT_FILTER_ENABLED: bool = True
+    PROMPT_FILTER_CONFIG_PATH: str = "app/core/config/prompt_filters.json"
+    PROMPT_FILTER_STRICT_MODE: bool = True  # Block on moderation API errors
     
     # Redis settings
     REDIS_URL: str = "redis://redis:6379/0"

@@ -16,6 +16,7 @@ from app.models.chat import Message, Conversation
 from app.core.config import Settings
 from app.core.monitoring import log_chat_event
 from app.services.ai import AIService, AIServiceError, ModelType
+from app.services.prompt_filter import PromptFilterService, FilterAction
 from app.core.security import PIIHandler
 from app.core.security.exceptions import TenantMismatchError
 
@@ -26,6 +27,7 @@ class ChatService:
     Attributes:
         chat_repository: Repository for chat-related database operations
         ai_service: Service for AI model interactions
+        prompt_filter_service: Service for filtering prompts
         settings: Application settings
         pii_handler: Handler for PII detection and masking
     """
@@ -34,10 +36,12 @@ class ChatService:
         self,
         chat_repository: ChatRepository,
         ai_service: AIService,
+        prompt_filter_service: PromptFilterService,
         settings: Settings
     ):
         self.chat_repository = chat_repository
         self.ai_service = ai_service
+        self.prompt_filter_service = prompt_filter_service
         self.settings = settings
         self.pii_handler = PIIHandler()
         self.max_retries = 3
@@ -175,6 +179,73 @@ class ChatService:
             TenantMismatchError: If conversation belongs to different tenant
         """
         try:
+            # Apply prompt filtering first
+            filter_result = await self.prompt_filter_service.filter_prompt(
+                content=message,
+                user_id=str(user_id),
+                tenant_id=str(tenant_id)
+            )
+            
+            # If prompt is blocked, return appropriate response
+            if not filter_result.is_allowed:
+                await log_chat_event(
+                    event_type="message_blocked",
+                    user_id=user_id,
+                    tenant_id=tenant_id,
+                    chatbot_instance_id=chatbot_instance_id,
+                    details={
+                        "filter_action": filter_result.action,
+                        "triggered_filters": filter_result.triggered_filters,
+                        "moderation_flagged": filter_result.moderation_flagged
+                    }
+                )
+                
+                # Create a system message to store the blocked attempt
+                conversation = await self._get_or_create_conversation(
+                    user_id, tenant_id, chatbot_instance_id, conversation_id
+                )
+                
+                # Store the original user message (for audit purposes)
+                await self.chat_repository.create_message(
+                    conversation_id=conversation.id,
+                    content=message,
+                    role="user",
+                    user_id=user_id,
+                    metadata={"blocked": True, "filter_result": filter_result.model_dump()}
+                )
+                
+                # Store the system response
+                system_message = await self.chat_repository.create_message(
+                    conversation_id=conversation.id,
+                    content=filter_result.message or "🚫 Your message was blocked by our content filter.",
+                    role="system",
+                    metadata={"filter_block": True}
+                )
+                
+                return {
+                    "message_id": system_message.id,
+                    "conversation_id": conversation.id,
+                    "content": system_message.content,
+                    "role": system_message.role,
+                    "timestamp": system_message.timestamp,
+                    "metadata": system_message.metadata,
+                }
+            
+            # Use filtered content if sanitization occurred
+            processed_message = filter_result.filtered_content or message
+            
+            # Log sanitization if it occurred
+            if filter_result.action == FilterAction.SANITIZE:
+                await log_chat_event(
+                    event_type="message_sanitized",
+                    user_id=user_id,
+                    tenant_id=tenant_id,
+                    chatbot_instance_id=chatbot_instance_id,
+                    details={
+                        "triggered_filters": filter_result.triggered_filters
+                    }
+                )
+            
             # Get or create conversation
             conversation = await self._get_or_create_conversation(
                 user_id, tenant_id, chatbot_instance_id, conversation_id
@@ -183,8 +254,8 @@ class ChatService:
             # Get conversation context
             context = await self._get_conversation_context(conversation.id)
             
-            # Detect and mask PII in user message
-            masked_message = await self.pii_handler.process_text(message)
+            # Detect and mask PII in processed message
+            masked_message = await self.pii_handler.process_text(processed_message)
             
             # Process through AI service with retries
             for attempt in range(self.max_retries):
@@ -207,11 +278,20 @@ class ChatService:
             masked_ai_response = await self.pii_handler.process_text(ai_response)
             
             # Store messages
+            user_message_metadata = {}
+            if filter_result.action == FilterAction.SANITIZE:
+                user_message_metadata.update({
+                    "sanitized": True,
+                    "sanitization_message": filter_result.message,
+                    "triggered_filters": filter_result.triggered_filters
+                })
+            
             user_message = await self.chat_repository.create_message(
                 conversation_id=conversation.id,
                 content=masked_message,
                 role="user",
-                user_id=user_id
+                user_id=user_id,
+                metadata=user_message_metadata if user_message_metadata else None
             )
             
             ai_message = await self.chat_repository.create_message(
@@ -226,16 +306,27 @@ class ChatService:
                 user_id=user_id,
                 tenant_id=tenant_id,
                 conversation_id=conversation.id,
-                model_type=model_type.value
+                model_type=model_type.value,
+                details={
+                    "filter_applied": filter_result.action != FilterAction.ALLOW,
+                    "sanitized": filter_result.action == FilterAction.SANITIZE
+                }
             )
+            
+            # Prepare response with sanitization warning if applicable
+            response_content = ai_message.content
+            response_metadata = ai_message.metadata or {}
+            
+            if filter_result.action == FilterAction.SANITIZE and filter_result.message:
+                response_metadata["sanitization_warning"] = filter_result.message
             
             return {
                 "message_id": ai_message.id,
                 "conversation_id": conversation.id,
-                "content": ai_message.content,
+                "content": response_content,
                 "role": ai_message.role,
                 "timestamp": ai_message.timestamp,
-                "metadata": ai_message.metadata,
+                "metadata": response_metadata,
             }
             
         except Exception as e:
